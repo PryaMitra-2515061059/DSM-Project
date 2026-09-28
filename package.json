@@ -1,0 +1,14 @@
+{
+  "name": "kopi-batin-customer-module",
+  "version": "1.0.0",
+  "description": "Modul Data Pelanggan Kopi Batin dengan autentikasi server + database SQLite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "dev": "node --no-warnings --watch server.js"
+  },
+  "engines": { "node": ">=22.13.0" },
+  "optionalDependencies": { "nodemailer": "^6.9.14" },
+  "license": "UNLICENSED",
+  "private": true
+}

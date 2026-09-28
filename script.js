@@ -58,29 +58,34 @@ function exportCSV(){
  const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="data-pelanggan-kopi-batin.csv";a.click();URL.revokeObjectURL(a.href);toast("CSV berhasil diekspor")}
 
-const authKey="kopiBatinMembers";
-let members=JSON.parse(localStorage.getItem(authKey)||"null")||[
-  {id:1,name:"Admin Kopi Batin",phone:"081234567890",email:"admin@kopibatin.id",password:"admin123"}
-];
-function persistMembers(){localStorage.setItem(authKey,JSON.stringify(members))}
+/* ================= AUTENTIKASI (terhubung ke server + database) ================= */
+let sessionUser=null;
+const isFile=location.protocol==="file:";
+async function api(path,body){
+  if(isFile)throw new Error("Jalankan server dengan 'npm start', lalu buka http://localhost:3000");
+  let r;
+  try{r=await fetch(path,{method:body===undefined?"GET":"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:body===undefined?undefined:JSON.stringify(body)})}
+  catch{throw new Error("Tidak dapat terhubung ke server. Pastikan server sudah berjalan.")}
+  let j={};try{j=await r.json()}catch{}
+  if(!r.ok)throw new Error(j.error||"Terjadi kesalahan pada server");
+  return j;
+}
+function busy(btn,on){if(btn){btn.disabled=on;btn.style.opacity=on?".6":"1"}}
+function pingAuth(){try{localStorage.setItem("kopiBatinAuthPing",String(Date.now()))}catch{}}
 function switchAuth(type){
   document.getElementById("loginTab").classList.toggle("active",type==="login");
   document.getElementById("registerTab").classList.toggle("active",type==="register");
   document.getElementById("loginForm").classList.toggle("active",type==="login");
   document.getElementById("registerForm").classList.toggle("active",type==="register");
+  document.getElementById("forgotForm").classList.remove("active");
 }
-function currentUser(){return JSON.parse(localStorage.getItem("kopiBatinCurrentUser")||"null")}
+function currentUser(){return sessionUser}
 
-let resetState={email:"",code:"",expiresAt:0};
-
-function showLogin(){
-  switchAuth("login");
-}
+let resetState={email:"",token:""};
+function showLogin(){switchAuth("login")}
 function showForgotPassword(){
-  document.getElementById("loginTab").classList.remove("active");
-  document.getElementById("registerTab").classList.remove("active");
-  document.getElementById("loginForm").classList.remove("active");
-  document.getElementById("registerForm").classList.remove("active");
+  ["loginTab","registerTab"].forEach(i=>document.getElementById(i).classList.remove("active"));
+  ["loginForm","registerForm"].forEach(i=>document.getElementById(i).classList.remove("active"));
   document.getElementById("forgotForm").classList.add("active");
   showForgotStep(1);
 }
@@ -88,85 +93,93 @@ function showForgotStep(step){
   [1,2,3].forEach(n=>document.getElementById("resetStep"+n).classList.toggle("active",n===step));
   if(step!==2)document.getElementById("demoCode").style.display="none";
 }
-function requestReset(){
+async function requestReset(){
+  const btn=document.querySelector("#resetStep1 .auth-submit");
   const email=document.getElementById("resetEmail").value.trim().toLowerCase();
   if(!email){toast("Masukkan email terlebih dahulu");return}
-  const member=members.find(x=>x.email.toLowerCase()===email);
-  if(!member){toast("Email tidak ditemukan dalam data member");return}
-
-  resetState.email=email;
-  resetState.code=String(Math.floor(100000+Math.random()*900000));
-  resetState.expiresAt=Date.now()+5*60*1000;
-
-  document.getElementById("resetCode").value="";
-  document.getElementById("demoCode").innerHTML="<b>Mode Prototype:</b> kode verifikasi simulasi adalah <strong>"+resetState.code+"</strong>. Pada sistem nyata, kode dikirim melalui email/WhatsApp.";
-  document.getElementById("demoCode").style.display="block";
-  showForgotStep(2);
-  toast("Kode verifikasi berhasil dibuat");
+  busy(btn,true);
+  try{
+    const r=await api("/api/forgot",{email});
+    resetState={email,token:""};
+    document.getElementById("resetCode").value="";
+    const demo=document.getElementById("demoCode");
+    if(r.devCode){demo.innerHTML="<b>Mode Pengembangan:</b> kode verifikasi Anda <strong>"+r.devCode+"</strong>. Pada mode produksi kode hanya dikirim lewat email.";demo.style.display="block"}
+    else demo.style.display="none";
+    showForgotStep(2);
+    toast(r.message||"Kode verifikasi dikirim");
+  }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
-function verifyResetCode(){
+async function verifyResetCode(){
+  const btn=document.querySelector("#resetStep2 .auth-submit");
   const code=document.getElementById("resetCode").value.trim();
-  if(Date.now()>resetState.expiresAt){toast("Kode sudah kedaluwarsa. Minta kode baru.");showForgotStep(1);return}
-  if(code!==resetState.code){toast("Kode verifikasi salah");return}
-  showForgotStep(3);
-  toast("Kode terverifikasi");
+  if(!/^\d{6}$/.test(code)){toast("Kode terdiri dari 6 angka");return}
+  busy(btn,true);
+  try{
+    const r=await api("/api/verify-reset",{email:resetState.email,code});
+    resetState.token=r.resetToken;
+    showForgotStep(3);toast("Kode terverifikasi");
+  }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
-function resetPassword(){
+async function resetPassword(){
+  const btn=document.querySelector("#resetStep3 .auth-submit");
   const p1=document.getElementById("newPassword").value;
   const p2=document.getElementById("newPasswordConfirm").value;
-  if(p1.length<6){toast("Password minimal 6 karakter");return}
+  if(p1.length<8){toast("Password minimal 8 karakter");return}
   if(p1!==p2){toast("Konfirmasi password tidak cocok");return}
-  const index=members.findIndex(x=>x.email.toLowerCase()===resetState.email);
-  if(index<0){toast("Akun tidak ditemukan");return}
-  members[index].password=p1;
-  persistMembers();
-  resetState={email:"",code:"",expiresAt:0};
-  document.getElementById("newPassword").value="";
-  document.getElementById("newPasswordConfirm").value="";
-  document.getElementById("resetEmail").value="";
-  document.getElementById("resetCode").value="";
-  showLogin();
-  toast("Password berhasil direset. Silakan login.");
+  busy(btn,true);
+  try{
+    await api("/api/reset",{email:resetState.email,resetToken:resetState.token,password:p1,confirm:p2});
+    resetState={email:"",token:""};
+    ["newPassword","newPasswordConfirm","resetEmail","resetCode"].forEach(i=>document.getElementById(i).value="");
+    showLogin();pingAuth();
+    toast("Password berhasil direset. Silakan login.");
+  }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
 
-function showAuth(){
-  document.getElementById("authScreen").classList.toggle("hidden",!!currentUser());
+function setUser(u){
+  sessionUser=u||null;
+  document.getElementById("authScreen").classList.toggle("hidden",!!sessionUser);
   updateUserUI();
 }
+async function showAuth(){
+  try{const r=await api("/api/me");setUser(r.user)}
+  catch(err){setUser(null);toast(err.message)}
+}
 function updateUserUI(){
-  const u=currentUser(); if(!u)return;
+  const u=sessionUser;if(!u)return;
   document.getElementById("userName").textContent=u.name;
   document.getElementById("userAvatar").textContent=initials(u.name);
 }
-function login(e){
+async function login(e){
   e.preventDefault();
-  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
-  const password=document.getElementById("loginPassword").value;
-  const u=members.find(x=>x.email.toLowerCase()===email && x.password===password);
-  if(!u){toast("Email atau password salah");return}
-  localStorage.setItem("kopiBatinCurrentUser",JSON.stringify({id:u.id,name:u.name,email:u.email,phone:u.phone}));
-  document.getElementById("loginForm").reset();
-  showAuth(); toast("Login berhasil. Selamat datang, "+u.name);
+  const btn=e.target.querySelector(".auth-submit");
+  busy(btn,true);
+  try{
+    const r=await api("/api/login",{email:document.getElementById("loginEmail").value.trim(),password:document.getElementById("loginPassword").value});
+    document.getElementById("loginForm").reset();
+    setUser(r.user);pingAuth();
+    toast("Login berhasil. Selamat datang, "+r.user.name);
+  }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
-function register(e){
+async function register(e){
   e.preventDefault();
-  const name=document.getElementById("regName").value.trim();
-  const phone=document.getElementById("regPhone").value.trim();
-  const email=document.getElementById("regEmail").value.trim().toLowerCase();
-  const password=document.getElementById("regPassword").value;
-  const confirm=document.getElementById("regConfirm").value;
+  const btn=e.target.querySelector(".auth-submit");
+  const password=document.getElementById("regPassword").value,confirm=document.getElementById("regConfirm").value;
   if(password!==confirm){toast("Konfirmasi password tidak cocok");return}
-  if(members.some(x=>x.email.toLowerCase()===email)){toast("Email sudah terdaftar. Silakan login.");switchAuth("login");return}
-  const u={id:Date.now(),name,phone,email,password};
-  members.push(u);persistMembers();
-  localStorage.setItem("kopiBatinCurrentUser",JSON.stringify({id:u.id,name:u.name,email:u.email,phone:u.phone}));
-  document.getElementById("registerForm").reset();
-  showAuth(); toast("Akun berhasil dibuat. Selamat datang, "+name);
+  busy(btn,true);
+  try{
+    const r=await api("/api/register",{name:document.getElementById("regName").value.trim(),phone:document.getElementById("regPhone").value.trim(),email:document.getElementById("regEmail").value.trim(),password,confirm});
+    document.getElementById("registerForm").reset();
+    setUser(r.user);pingAuth();
+    toast("Akun berhasil dibuat. Selamat datang, "+r.user.name);
+  }catch(err){
+    toast(err.message);
+    if(/sudah terdaftar/i.test(err.message))switchAuth("login");
+  }finally{busy(btn,false)}
 }
-function logout(){
-  localStorage.removeItem("kopiBatinCurrentUser");
-  switchAuth("login");
-  document.getElementById("authScreen").classList.remove("hidden");
+async function logout(){
+  try{await api("/api/logout",{})}catch(err){toast(err.message);return}
+  setUser(null);switchAuth("login");pingAuth();
   toast("Anda telah keluar dari akun");
 }
 showAuth();
@@ -223,8 +236,7 @@ window.addEventListener("storage",e=>{
     toast("Data diperbarui otomatis dari tab lain");
   }
   else if(e.key===actKey){activity=JSON.parse(e.newValue||"[]");renderActivity(activity[0]&&activity[0].t)}
-  else if(e.key===authKey){members=JSON.parse(e.newValue||"null")||members}
-  else if(e.key==="kopiBatinCurrentUser"){showAuth()}   // login/logout ikut tersinkron
+  else if(e.key==="kopiBatinAuthPing"){showAuth()}   // login/logout ikut tersinkron
 });
 
 /* Indikator koneksi */
