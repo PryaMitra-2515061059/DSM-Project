@@ -1,3 +1,13 @@
+const SUPABASE_URL = "https://yidwhtzcuethnjtnjfw.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_bf7ACxh-D-OkSCUp7877_A_SXXbzVi0";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+);
+
 const seed=[
 {id:1,name:"Raka Pratama",phone:"081234567890",email:"raka@email.com",joined:"2026-08-05",note:"Mahasiswa",transactions:[
 {date:"2026-09-27",product:"Kopi Susu Batin",qty:2,amount:30000},{date:"2026-09-20",product:"Brownies",qty:1,amount:18000},{date:"2026-09-10",product:"Matcha Latte",qty:1,amount:22000}]},
@@ -142,9 +152,30 @@ function setUser(u){
   updateUserUI();
 }
 async function showAuth(){
-  try{const r=await api("/api/me");setUser(r.user)}
-  catch(err){setUser(null);toast(err.message)}
+
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  if (!session) {
+    setUser(null);
+    return;
+  }
+
+  const user = session.user;
+
+  const name =
+    user.user_metadata?.full_name ||
+    user.email?.split("@")[0] ||
+    "Member";
+
+  setUser({
+    id: user.id,
+    name: name,
+    email: user.email
+  });
 }
+
 function updateUserUI(){
   const u=sessionUser;if(!u)return;
   document.getElementById("userName").textContent=u.name;
@@ -152,47 +183,171 @@ function updateUserUI(){
 }
 async function login(e){
   e.preventDefault();
-  const btn=e.target.querySelector(".auth-submit");
-  busy(btn,true);
-  try{
-    const r=await api("/api/login",{email:document.getElementById("loginEmail").value.trim(),password:document.getElementById("loginPassword").value});
+
+  const btn = e.target.querySelector(".auth-submit");
+  busy(btn, true);
+
+  try {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+    if (error) throw error;
+
+    const user = data.user;
+
+    const name =
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      "Member";
+
+    setUser({
+      id: user.id,
+      name: name,
+      email: user.email
+    });
+
     document.getElementById("loginForm").reset();
-    setUser(r.user);pingAuth();
-    toast("Login berhasil. Selamat datang, "+r.user.name);
-  }catch(err){toast(err.message)}finally{busy(btn,false)}
+
+    toast("Login berhasil. Selamat datang, " + name);
+
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    busy(btn, false);
+  }
 }
+
 async function register(e){
   e.preventDefault();
-  const btn=e.target.querySelector(".auth-submit");
-  const password=document.getElementById("regPassword").value,confirm=document.getElementById("regConfirm").value;
-  if(password!==confirm){toast("Konfirmasi password tidak cocok");return}
-  busy(btn,true);
-  try{
-    const r=await api("/api/register",{name:document.getElementById("regName").value.trim(),phone:document.getElementById("regPhone").value.trim(),email:document.getElementById("regEmail").value.trim(),password,confirm});
+
+  const btn = e.target.querySelector(".auth-submit");
+  const name = document.getElementById("regName").value.trim();
+  const phone = document.getElementById("regPhone").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const confirm = document.getElementById("regConfirm").value;
+
+  if (password !== confirm) {
+    toast("Konfirmasi password tidak cocok");
+    return;
+  }
+
+  if (password.length < 8) {
+    toast("Password minimal 8 karakter");
+    return;
+  }
+
+  busy(btn, true);
+
+  try {
+
+    const { data, error } =
+      await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            phone: phone
+          }
+        }
+      });
+
+    if (error) throw error;
+
     document.getElementById("registerForm").reset();
-    setUser(r.user);pingAuth();
-    toast("Akun berhasil dibuat. Selamat datang, "+r.user.name);
-  }catch(err){
+
+    /*
+      Jika Confirm Email aktif di Supabase,
+      user harus membuka email konfirmasi terlebih dahulu.
+    */
+
+    if (data.session) {
+
+      setUser({
+        id: data.user.id,
+        name: name,
+        email: data.user.email
+      });
+
+      toast("Akun berhasil dibuat. Selamat datang, " + name);
+
+    } else {
+
+      switchAuth("login");
+
+      toast(
+        "Akun berhasil dibuat. Silakan cek email untuk verifikasi."
+      );
+
+    }
+
+  } catch (err) {
+
     toast(err.message);
-    if(/sudah terdaftar/i.test(err.message))switchAuth("login");
-  }finally{busy(btn,false)}
+
+  } finally {
+
+    busy(btn, false);
+
+  }
 }
+
 async function logout(){
-  try{await api("/api/logout",{})}catch(err){toast(err.message);return}
-  setUser(null);switchAuth("login");pingAuth();
+
+  const { error } =
+    await supabaseClient.auth.signOut();
+
+  if (error) {
+    toast(error.message);
+    return;
+  }
+
+  setUser(null);
+  switchAuth("login");
+
   toast("Anda telah keluar dari akun");
 }
+
 showAuth();
+
+supabaseClient.auth.onAuthStateChange(
+  (event, session) => {
+
+    if (session) {
+
+      const user = session.user;
+
+      const name =
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "Member";
+
+      setUser({
+        id: user.id,
+        name: name,
+        email: user.email
+      });
+
+    } else {
+
+      setUser(null);
+
+    }
+
+  }
+);
 
 render();
 
 
-/* ================= FITUR REAL-TIME =================
-   1. Jam live (per detik)
-   2. Sinkronisasi otomatis antar tab/jendela (event "storage")
-   3. Feed aktivitas live + waktu relatif ("2 menit lalu")
-   4. Animasi angka statistik & baris tabel saat data berubah
-   Catatan: sinkronisasi antar PERANGKAT butuh backend (Firebase/Supabase/WebSocket). */
+/* ================= FITUR REAL-TIME =================*/
 const actKey="kopiBatinActivity", custKey="kopiBatinCustomers";
 let activity=JSON.parse(localStorage.getItem(actKey)||"[]");
 const esc=t=>String(t).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
