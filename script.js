@@ -12,7 +12,7 @@ let data=JSON.parse(localStorage.getItem("kopiBatinCustomers")||"null")||seed;
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
 const initials=n=>n.split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase();
-function persist(){localStorage.setItem("kopiBatinCustomers",JSON.stringify(data))}
+function persist(){localStorage.setItem("kopiBatinCustomers",JSON.stringify(data));markSync()}
 function totals(c){return {visits:c.transactions.length,items:c.transactions.reduce((a,t)=>a+Number(t.qty),0),spend:c.transactions.reduce((a,t)=>a+Number(t.amount),0),last:c.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]?.date||null}}
 function render(){
  const q=document.getElementById("search").value.toLowerCase(), s=document.getElementById("sort").value;
@@ -37,18 +37,18 @@ function openCustomer(id=null){
  else{document.querySelector("#customerModal form").reset();joined.value=new Date().toISOString().slice(0,10)}
 }
 function saveCustomer(e){e.preventDefault();let id=Number(customerId.value);let obj={id:id||Date.now(),name:name.value.trim(),phone:phone.value.trim(),email:email.value.trim(),joined:joined.value,note:note.value.trim(),transactions:[]};
- if(id){let old=data.find(x=>x.id===id);obj.transactions=old.transactions;data=data.map(x=>x.id===id?obj:x);toast("Data pelanggan diperbarui")}
- else{data.unshift(obj);toast("Pelanggan berhasil ditambahkan")}
+ if(id){let old=data.find(x=>x.id===id);obj.transactions=old.transactions;data=data.map(x=>x.id===id?obj:x);toast("Data pelanggan diperbarui");logActivity("Data pelanggan <b>"+esc(obj.name)+"</b> diperbarui","edit")}
+ else{data.unshift(obj);toast("Pelanggan berhasil ditambahkan");logActivity("Pelanggan baru <b>"+esc(obj.name)+"</b> ditambahkan","add")}
  persist();render();closeModal("customerModal")}
 function openTransaction(id){trxCustomerId.value=id;product.value="";qty.value=1;amount.value="";trxDate.value=new Date().toISOString().slice(0,10);document.getElementById("transactionModal").classList.add("show")}
-function saveTransaction(e){e.preventDefault();let c=data.find(x=>x.id===Number(trxCustomerId.value));c.transactions.push({date:trxDate.value,product:product.value.trim(),qty:Number(qty.value),amount:Number(amount.value)});persist();render();closeModal("transactionModal");toast("Transaksi berhasil dicatat")}
+function saveTransaction(e){e.preventDefault();let c=data.find(x=>x.id===Number(trxCustomerId.value));c.transactions.push({date:trxDate.value,product:product.value.trim(),qty:Number(qty.value),amount:Number(amount.value)});persist();render();closeModal("transactionModal");toast("Transaksi berhasil dicatat");logActivity("<b>"+esc(c.name)+"</b> membeli "+esc(product.value.trim())+" ("+Number(qty.value)+" item) senilai "+rupiah(Number(amount.value)),"trx")}
 function detail(id){let c=data.find(x=>x.id===id),t=totals(c);document.getElementById("detailContent").innerHTML=`
 <div class="detail-profile"><div class="big-avatar">${initials(c.name)}</div><div><h3>${c.name}</h3><p>${c.phone}${c.email?" · "+c.email:""}</p></div></div>
 <div class="mini-stats"><div class="mini"><small>Kunjungan</small><b>${t.visits} kali</b></div><div class="mini"><small>Jumlah item</small><b>${t.items} item</b></div><div class="mini"><small>Total pembelian</small><b>${rupiah(t.spend)}</b></div></div>
 <div class="history-title">Riwayat Pembelian</div>
 ${c.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="history-item"><div><b>${x.product}</b><small>${fmtDate(x.date)} · ${x.qty} item</small></div><b>${rupiah(x.amount)}</b></div>`).join("")||'<div class="empty">Belum ada riwayat pembelian.</div>'}`;
 document.getElementById("detailModal").classList.add("show")}
-function removeCustomer(id){let c=data.find(x=>x.id===id);if(confirm("Hapus data pelanggan "+c.name+"?")){data=data.filter(x=>x.id!==id);persist();render();toast("Data pelanggan dihapus")}}
+function removeCustomer(id){let c=data.find(x=>x.id===id);if(confirm("Hapus data pelanggan "+c.name+"?")){data=data.filter(x=>x.id!==id);persist();render();toast("Data pelanggan dihapus");logActivity("Data pelanggan <b>"+esc(c.name)+"</b> dihapus","del")}}
 function closeModal(id){document.getElementById(id).classList.remove("show")}
 function resetFilter(){search.value="";sort.value="latest";render()}
 function toast(msg){let el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2200)}
@@ -172,3 +172,68 @@ function logout(){
 showAuth();
 
 render();
+
+
+/* ================= FITUR REAL-TIME =================
+   1. Jam live (per detik)
+   2. Sinkronisasi otomatis antar tab/jendela (event "storage")
+   3. Feed aktivitas live + waktu relatif ("2 menit lalu")
+   4. Animasi angka statistik & baris tabel saat data berubah
+   Catatan: sinkronisasi antar PERANGKAT butuh backend (Firebase/Supabase/WebSocket). */
+const actKey="kopiBatinActivity", custKey="kopiBatinCustomers";
+let activity=JSON.parse(localStorage.getItem(actKey)||"[]");
+const esc=t=>String(t).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+
+function tickClock(){
+  const el=document.getElementById("liveClock"); if(!el)return;
+  el.textContent=new Date().toLocaleTimeString("id-ID",{hour12:false})+" WIB";
+}
+function timeAgo(ts){
+  const d=Math.floor((Date.now()-ts)/1000);
+  if(d<10)return "baru saja"; if(d<60)return d+" detik lalu";
+  if(d<3600)return Math.floor(d/60)+" menit lalu";
+  if(d<86400)return Math.floor(d/3600)+" jam lalu";
+  return new Date(ts).toLocaleDateString("id-ID",{day:"2-digit",month:"short"});
+}
+const actIcon={add:"＋",edit:"✎",trx:"☕",del:"⌫"};
+function renderActivity(freshTs){
+  const box=document.getElementById("activityList"); if(!box)return;
+  box.innerHTML=activity.length?activity.slice(0,8).map(a=>`<div class="act-item${a.t===freshTs?" new":""}">
+    <div class="act-ico ${a.type==="trx"?"trx":a.type==="del"?"del":""}">${actIcon[a.type]||"•"}</div>
+    <div class="act-body">${a.text}<small>oleh ${esc(a.by)}</small></div>
+    <div class="act-time" data-ts="${a.t}">${timeAgo(a.t)}</div></div>`).join("")
+    :'<div class="empty">Belum ada aktivitas. Tambah pelanggan atau catat pembelian untuk melihat pembaruan langsung.</div>';
+}
+function logActivity(text,type){
+  const item={t:Date.now(),text,type,by:(currentUser()||{}).name||"Sistem"};
+  activity.unshift(item); activity=activity.slice(0,30);
+  localStorage.setItem(actKey,JSON.stringify(activity));
+  renderActivity(item.t); flashStats();
+}
+function flashStats(){
+  document.querySelectorAll(".stat .num").forEach(n=>{n.classList.remove("flash");void n.offsetWidth;n.classList.add("flash")});
+}
+function markSync(){} // titik kait bila nanti dihubungkan ke backend
+
+/* Sinkronisasi antar tab: event "storage" hanya terpicu di tab LAIN */
+window.addEventListener("storage",e=>{
+  if(e.key===custKey){
+    data=JSON.parse(e.newValue||"null")||seed;
+    render();flashStats();
+    toast("Data diperbarui otomatis dari tab lain");
+  }
+  else if(e.key===actKey){activity=JSON.parse(e.newValue||"[]");renderActivity(activity[0]&&activity[0].t)}
+  else if(e.key===authKey){members=JSON.parse(e.newValue||"null")||members}
+  else if(e.key==="kopiBatinCurrentUser"){showAuth()}   // login/logout ikut tersinkron
+});
+
+/* Indikator koneksi */
+function setOnline(){
+  document.querySelectorAll(".live-box .live-dot").forEach(d=>d.classList.toggle("offline",!navigator.onLine));
+  const b=document.querySelector(".live-box b"); if(b)b.textContent=navigator.onLine?"Live":"Offline";
+}
+window.addEventListener("online",setOnline);window.addEventListener("offline",setOnline);
+
+tickClock();renderActivity();setOnline();
+setInterval(tickClock,1000);
+setInterval(()=>document.querySelectorAll(".act-time").forEach(el=>el.textContent=timeAgo(Number(el.dataset.ts))),15000);

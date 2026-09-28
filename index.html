@@ -1,142 +1,148 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kopi Batin — Modul Data Pelanggan</title>
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kopi Batin — Modul Data Pelanggan</title>
 
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div class="app">
-<aside class="sidebar">
-  <div class="brand"><div class="logo">KB</div><div><b>Kopi Batin</b><small>Customer Information</small></div></div>
-  <div class="nav-title">Menu Utama</div>
-  <nav class="nav">
-    <a href="#" class="active"><span class="ico">◉</span><span>Data Pelanggan</span></a>
-    <a href="#" onclick="showComing(event,'Riwayat Transaksi')"><span class="ico">▤</span><span>Riwayat Transaksi</span></a>
-    <a href="#" onclick="showComing(event,'Laporan')"><span class="ico">▥</span><span>Laporan</span></a>
-  </nav>
-  <div class="nav-title">Sistem</div>
-  <nav class="nav"><a href="#" onclick="showComing(event,'Pengaturan')"><span class="ico">⚙</span><span>Pengaturan</span></a></nav>
-  <div class="sidebar-bottom">Modul Data Pelanggan<br><span>Prototype Sistem Informasi</span></div>
-</aside>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+  <div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">KB</div><div><b>Kopi Batin</b><small>Customer Information</small></div></div>
+    <div class="nav-title">Menu Utama</div>
+    <nav class="nav">
+      <a href="#" class="active"><span class="ico">◉</span><span>Data Pelanggan</span></a>
+      <a href="#" onclick="showComing(event,'Riwayat Transaksi')"><span class="ico">▤</span><span>Riwayat Transaksi</span></a>
+      <a href="#" onclick="showComing(event,'Laporan')"><span class="ico">▥</span><span>Laporan</span></a>
+    </nav>
+    <div class="nav-title">Sistem</div>
+    <nav class="nav"><a href="#" onclick="showComing(event,'Pengaturan')"><span class="ico">⚙</span><span>Pengaturan</span></a></nav>
+    <div class="sidebar-bottom">Modul Data Pelanggan<br><span>Prototype Sistem Informasi</span></div>
+  </aside>
 
-<main class="main">
-  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Data Pelanggan</strong></div><div class="top-actions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small>Member</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
-  <div class="page-head"><div><h1>Data Pelanggan</h1><p>Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div></div>
-
-  <section class="stats">
-    <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="statCustomers">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Kunjungan</span><div class="badge-icon">↻</div></div><div class="num" id="statVisits">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Pembelian</span><div class="badge-icon">☕</div></div><div class="num" id="statItems">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Nilai Pembelian</span><div class="badge-icon">Rp</div></div><div class="num" id="statRevenue">Rp0</div></div>
-  </section>
-
-  <section class="panel">
-    <div class="toolbar">
-      <div class="search"><span>⌕</span><input id="search" placeholder="Cari nama atau nomor WhatsApp..." oninput="render()"></div>
-      <select id="sort" onchange="render()"><option value="latest">Terbaru</option><option value="name">Nama A–Z</option><option value="visits">Kunjungan terbanyak</option><option value="spend">Pembelian terbesar</option></select>
-      <button class="btn" onclick="resetFilter()">Reset</button>
+  <main class="main">
+    <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Data Pelanggan</strong></div><div class="top-actions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small>Member</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
+    <div class="page-head"><div><h1>Data Pelanggan</h1><p>Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div>
+      <div class="live-box" title="Data tersinkron otomatis antar tab/jendela"><span class="live-dot"></span><div><b>Live</b><small id="liveClock">--:--:--</small></div></div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Pelanggan</th><th>Kunjungan</th><th>Jumlah Pembelian</th><th>Total Pembelian</th><th>Terakhir Berkunjung</th><th>Status</th><th>Aksi</th></tr></thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </section>
-</main>
-</div>
 
-<div class="modal-back" id="customerModal">
-  <div class="modal">
-    <div class="modal-head"><h2 id="modalTitle">Tambah Pelanggan</h2><button class="close" onclick="closeModal('customerModal')">×</button></div>
-    <form class="form" onsubmit="saveCustomer(event)">
-      <input type="hidden" id="customerId">
-      <div class="field"><label>Nama Pelanggan *</label><input id="name" required placeholder="Contoh: Andi Pratama"></div>
-      <div class="field"><label>No. WhatsApp *</label><input id="phone" required placeholder="08xxxxxxxxxx"></div>
-      <div class="field"><label>Email</label><input id="email" type="email" placeholder="opsional"></div>
-      <div class="field"><label>Tanggal Bergabung *</label><input id="joined" type="date" required></div>
-      <div class="field full"><label>Catatan</label><input id="note" placeholder="Catatan pelanggan (opsional)"></div>
-    </form>
-    <div class="modal-foot"><button class="btn" onclick="closeModal('customerModal')">Batal</button><button class="btn primary" onclick="document.querySelector('#customerModal form').requestSubmit()">Simpan Pelanggan</button></div>
+    <section class="stats">
+      <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="statCustomers">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Kunjungan</span><div class="badge-icon">↻</div></div><div class="num" id="statVisits">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Pembelian</span><div class="badge-icon">☕</div></div><div class="num" id="statItems">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Nilai Pembelian</span><div class="badge-icon">Rp</div></div><div class="num" id="statRevenue">Rp0</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="search"><span>⌕</span><input id="search" placeholder="Cari nama atau nomor WhatsApp..." oninput="render()"></div>
+        <select id="sort" onchange="render()"><option value="latest">Terbaru</option><option value="name">Nama A–Z</option><option value="visits">Kunjungan terbanyak</option><option value="spend">Pembelian terbesar</option></select>
+        <button class="btn" onclick="resetFilter()">Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelanggan</th><th>Kunjungan</th><th>Jumlah Pembelian</th><th>Total Pembelian</th><th>Terakhir Berkunjung</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel activity">
+      <div class="panel-head"><h3>Aktivitas Real-time</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
+      <div id="activityList"></div>
+    </section>
+  </main>
   </div>
-</div>
 
-<div class="modal-back" id="detailModal">
-  <div class="modal"><div class="modal-head"><h2>Detail Pelanggan</h2><button class="close" onclick="closeModal('detailModal')">×</button></div><div id="detailContent" class="detail"></div></div>
-</div>
-
-<div class="modal-back" id="transactionModal">
-  <div class="modal">
-    <div class="modal-head"><h2>Catat Pembelian</h2><button class="close" onclick="closeModal('transactionModal')">×</button></div>
-    <form class="form" onsubmit="saveTransaction(event)">
-      <input type="hidden" id="trxCustomerId">
-      <div class="field"><label>Menu / Produk *</label><input id="product" required placeholder="Contoh: Kopi Susu Batin"></div>
-      <div class="field"><label>Jumlah *</label><input id="qty" type="number" min="1" value="1" required></div>
-      <div class="field"><label>Total Pembelian (Rp) *</label><input id="amount" type="number" min="0" required placeholder="25000"></div>
-      <div class="field"><label>Tanggal *</label><input id="trxDate" type="date" required></div>
-    </form>
-    <div class="modal-foot"><button class="btn" onclick="closeModal('transactionModal')">Batal</button><button class="btn primary" onclick="document.querySelector('#transactionModal form').requestSubmit()">Simpan Transaksi</button></div>
-  </div>
-</div>
-
-<div class="auth-back" id="authScreen">
-  <div class="auth-card">
-    <div class="auth-brand"><div class="auth-logo">KB</div><h2>Kopi Batin</h2><p>Member Area · Data Pelanggan</p></div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="loginTab" onclick="switchAuth('login')">Login</button>
-      <button class="auth-tab" id="registerTab" onclick="switchAuth('register')">Register</button>
+  <div class="modal-back" id="customerModal">
+    <div class="modal">
+      <div class="modal-head"><h2 id="modalTitle">Tambah Pelanggan</h2><button class="close" onclick="closeModal('customerModal')">×</button></div>
+      <form class="form" onsubmit="saveCustomer(event)">
+        <input type="hidden" id="customerId">
+        <div class="field"><label>Nama Pelanggan *</label><input id="name" required placeholder="Contoh: Andi Pratama"></div>
+        <div class="field"><label>No. WhatsApp *</label><input id="phone" required placeholder="08xxxxxxxxxx"></div>
+        <div class="field"><label>Email</label><input id="email" type="email" placeholder="opsional"></div>
+        <div class="field"><label>Tanggal Bergabung *</label><input id="joined" type="date" required></div>
+        <div class="field full"><label>Catatan</label><input id="note" placeholder="Catatan pelanggan (opsional)"></div>
+      </form>
+      <div class="modal-foot"><button class="btn" onclick="closeModal('customerModal')">Batal</button><button class="btn primary" onclick="document.querySelector('#customerModal form').requestSubmit()">Simpan Pelanggan</button></div>
     </div>
+  </div>
 
-    <form class="auth-form active" id="loginForm" onsubmit="login(event)">
-      <div class="auth-field"><label>Email</label><input id="loginEmail" type="email" required placeholder="nama@email.com"></div>
-      <div class="auth-field"><label>Password</label><input id="loginPassword" type="password" required placeholder="Masukkan password"></div>
-      <button class="auth-submit">Login ke Akun</button>
-      <a class="auth-link" onclick="showForgotPassword()">Lupa password?</a>
-      <div class="auth-note">Belum punya akun? Pilih tab Register untuk membuat akun member.</div>
-    </form>
+  <div class="modal-back" id="detailModal">
+    <div class="modal"><div class="modal-head"><h2>Detail Pelanggan</h2><button class="close" onclick="closeModal('detailModal')">×</button></div><div id="detailContent" class="detail"></div></div>
+  </div>
 
+  <div class="modal-back" id="transactionModal">
+    <div class="modal">
+      <div class="modal-head"><h2>Catat Pembelian</h2><button class="close" onclick="closeModal('transactionModal')">×</button></div>
+      <form class="form" onsubmit="saveTransaction(event)">
+        <input type="hidden" id="trxCustomerId">
+        <div class="field"><label>Menu / Produk *</label><input id="product" required placeholder="Contoh: Kopi Susu Batin"></div>
+        <div class="field"><label>Jumlah *</label><input id="qty" type="number" min="1" value="1" required></div>
+        <div class="field"><label>Total Pembelian (Rp) *</label><input id="amount" type="number" min="0" required placeholder="25000"></div>
+        <div class="field"><label>Tanggal *</label><input id="trxDate" type="date" required></div>
+      </form>
+      <div class="modal-foot"><button class="btn" onclick="closeModal('transactionModal')">Batal</button><button class="btn primary" onclick="document.querySelector('#transactionModal form').requestSubmit()">Simpan Transaksi</button></div>
+    </div>
+  </div>
 
-    <div class="auth-form" id="forgotForm">
-      <div id="resetStep1" class="reset-step active">
-        <div class="auth-field"><label>Email Terdaftar</label><input id="resetEmail" type="email" placeholder="nama@email.com"></div>
-        <button type="button" class="auth-submit" onclick="requestReset()">Kirim Kode Reset</button>
-        <div class="auth-note">Masukkan email yang digunakan saat register. Untuk prototype tugas, kode verifikasi akan disimulasikan oleh sistem.</div>
-        <span class="back-auth" onclick="showLogin()">← Kembali ke Login</span>
+  <div class="auth-back" id="authScreen">
+    <div class="auth-card">
+      <div class="auth-brand"><div class="auth-logo">KB</div><h2>Kopi Batin</h2><p>Member Area · Data Pelanggan</p></div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTab" onclick="switchAuth('login')">Login</button>
+        <button class="auth-tab" id="registerTab" onclick="switchAuth('register')">Register</button>
       </div>
 
-      <div id="resetStep2" class="reset-step">
-        <div class="auth-field"><label>Kode Verifikasi</label><input id="resetCode" class="reset-code" inputmode="numeric" maxlength="6" placeholder="000000"></div>
-        <div id="demoCode" class="demo-code"></div>
-        <button type="button" class="auth-submit" onclick="verifyResetCode()">Verifikasi Kode</button>
-        <span class="back-auth" onclick="showForgotStep(1)">← Gunakan email lain</span>
+      <form class="auth-form active" id="loginForm" onsubmit="login(event)">
+        <div class="auth-field"><label>Email</label><input id="loginEmail" type="email" required placeholder="nama@email.com"></div>
+        <div class="auth-field"><label>Password</label><input id="loginPassword" type="password" required placeholder="Masukkan password"></div>
+        <button class="auth-submit">Login ke Akun</button>
+        <a class="auth-link" onclick="showForgotPassword()">Lupa password?</a>
+        <div class="auth-note">Belum punya akun? Pilih tab Register untuk membuat akun member.</div>
+      </form>
+
+
+      <div class="auth-form" id="forgotForm">
+        <div id="resetStep1" class="reset-step active">
+          <div class="auth-field"><label>Email Terdaftar</label><input id="resetEmail" type="email" placeholder="nama@email.com"></div>
+          <button type="button" class="auth-submit" onclick="requestReset()">Kirim Kode Reset</button>
+          <div class="auth-note">Masukkan email yang digunakan saat register. Untuk prototype tugas, kode verifikasi akan disimulasikan oleh sistem.</div>
+          <span class="back-auth" onclick="showLogin()">← Kembali ke Login</span>
+        </div>
+
+        <div id="resetStep2" class="reset-step">
+          <div class="auth-field"><label>Kode Verifikasi</label><input id="resetCode" class="reset-code" inputmode="numeric" maxlength="6" placeholder="000000"></div>
+          <div id="demoCode" class="demo-code"></div>
+          <button type="button" class="auth-submit" onclick="verifyResetCode()">Verifikasi Kode</button>
+          <span class="back-auth" onclick="showForgotStep(1)">← Gunakan email lain</span>
+        </div>
+
+        <div id="resetStep3" class="reset-step">
+          <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="6" placeholder="Minimal 6 karakter"></div>
+          <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="6" placeholder="Ulangi password baru"></div>
+          <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
+          <div class="auth-note">Gunakan minimal 6 karakter untuk password baru.</div>
+        </div>
       </div>
 
-      <div id="resetStep3" class="reset-step">
-        <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="6" placeholder="Minimal 6 karakter"></div>
-        <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="6" placeholder="Ulangi password baru"></div>
-        <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
-        <div class="auth-note">Gunakan minimal 6 karakter untuk password baru.</div>
-      </div>
+      <form class="auth-form" id="registerForm" onsubmit="register(event)">
+        <div class="auth-field"><label>Nama Lengkap</label><input id="regName" required placeholder="Nama lengkap"></div>
+        <div class="auth-field"><label>No. WhatsApp</label><input id="regPhone" required placeholder="08xxxxxxxxxx"></div>
+        <div class="auth-field"><label>Email</label><input id="regEmail" type="email" required placeholder="nama@email.com"></div>
+        <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="6" required placeholder="Minimal 6 karakter"></div>
+        <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="6" required placeholder="Ulangi password"></div>
+        <button class="auth-submit">Buat Akun Member</button>
+        <div class="auth-note">Dengan mendaftar, data akun disimpan untuk kebutuhan prototype sistem.</div>
+      </form>
     </div>
-
-    <form class="auth-form" id="registerForm" onsubmit="register(event)">
-      <div class="auth-field"><label>Nama Lengkap</label><input id="regName" required placeholder="Nama lengkap"></div>
-      <div class="auth-field"><label>No. WhatsApp</label><input id="regPhone" required placeholder="08xxxxxxxxxx"></div>
-      <div class="auth-field"><label>Email</label><input id="regEmail" type="email" required placeholder="nama@email.com"></div>
-      <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="6" required placeholder="Minimal 6 karakter"></div>
-      <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="6" required placeholder="Ulangi password"></div>
-      <button class="auth-submit">Buat Akun Member</button>
-      <div class="auth-note">Dengan mendaftar, data akun disimpan untuk kebutuhan prototype sistem.</div>
-    </form>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
+  <div class="toast" id="toast"></div>
 
-</script>
-  <script src="script.js"></script>
-</body>
-</html>
+    <script src="script.js"></script>
+  </body>
+  </html>
