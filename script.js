@@ -2,7 +2,7 @@
    Salin "Project URL" dan "Publishable/anon key" persis dari:
    Supabase Dashboard -> Project Settings -> API
    Project ref harus 20 karakter (huruf kecil), contoh: abcdefghijklmnopqrst */
-const SUPABASE_URL = "https://yidwhtzcuethnjtnjfw.supabase.co";
+const SUPABASE_URL = "https://yidwhtzcuethnjtnfjfw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bf7ACxh-D-OkSCUp7877_A_SXXbzVi0";
 
 const SUPABASE_REF = (SUPABASE_URL.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/) || [])[1] || "";
