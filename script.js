@@ -1,12 +1,15 @@
+/* ================= KONFIGURASI SUPABASE =================
+   Salin "Project URL" dan "Publishable/anon key" persis dari:
+   Supabase Dashboard -> Project Settings -> API
+   Project ref harus 20 karakter (huruf kecil), contoh: abcdefghijklmnopqrst */
 const SUPABASE_URL = "https://yidwhtzcuethnjtnjfw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bf7ACxh-D-OkSCUp7877_A_SXXbzVi0";
 
-const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_bf7ACxh-D-OkSCUp7877_A_SXXbzVi0";
+const SUPABASE_REF = (SUPABASE_URL.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/) || [])[1] || "";
+const SUPABASE_URL_OK = SUPABASE_REF.length === 20;
+if (!SUPABASE_URL_OK) console.error("SUPABASE_URL tidak valid: project ref harus 20 karakter, sekarang " + SUPABASE_REF.length + ". Salin ulang dari dashboard Supabase.");
 
-const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
-);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 const seed=[
 {id:1,name:"Raka Pratama",phone:"081234567890",email:"raka@email.com",joined:"2026-08-05",note:"Mahasiswa",transactions:[
@@ -19,6 +22,7 @@ const seed=[
 {date:"2026-09-24",product:"Matcha Latte",qty:2,amount:44000},{date:"2026-09-17",product:"Kopi Susu Batin",qty:1,amount:15000},{date:"2026-09-03",product:"Brownies",qty:1,amount:18000},{date:"2026-08-28",product:"Americano",qty:1,amount:18000}]}
 ];
 let data=JSON.parse(localStorage.getItem("kopiBatinCustomers")||"null")||seed;
+const $=id=>document.getElementById(id);
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
 const initials=n=>n.split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase();
@@ -43,10 +47,10 @@ function openCustomer(id=null){
  document.getElementById("customerModal").classList.add("show");
  document.getElementById("modalTitle").textContent=id?"Edit Pelanggan":"Tambah Pelanggan";
  document.getElementById("customerId").value=id||"";
- if(id){let c=data.find(x=>x.id===id);name.value=c.name;phone.value=c.phone;email.value=c.email||"";joined.value=c.joined;note.value=c.note||""}
- else{document.querySelector("#customerModal form").reset();joined.value=new Date().toISOString().slice(0,10)}
+ if(id){let c=data.find(x=>x.id===id);$("name").value=c.name;$("phone").value=c.phone;$("email").value=c.email||"";$("joined").value=c.joined;$("note").value=c.note||""}
+ else{document.querySelector("#customerModal form").reset();$("joined").value=new Date().toISOString().slice(0,10)}
 }
-function saveCustomer(e){e.preventDefault();let id=Number(customerId.value);let obj={id:id||Date.now(),name:name.value.trim(),phone:phone.value.trim(),email:email.value.trim(),joined:joined.value,note:note.value.trim(),transactions:[]};
+function saveCustomer(e){e.preventDefault();let id=Number($("customerId").value);let obj={id:id||Date.now(),name:$("name").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),joined:$("joined").value,note:$("note").value.trim(),transactions:[]};
  if(id){let old=data.find(x=>x.id===id);obj.transactions=old.transactions;data=data.map(x=>x.id===id?obj:x);toast("Data pelanggan diperbarui");logActivity("Data pelanggan <b>"+esc(obj.name)+"</b> diperbarui","edit")}
  else{data.unshift(obj);toast("Pelanggan berhasil ditambahkan");logActivity("Pelanggan baru <b>"+esc(obj.name)+"</b> ditambahkan","add")}
  persist();render();closeModal("customerModal")}
@@ -70,18 +74,7 @@ function exportCSV(){
 
 /* ================= AUTENTIKASI (terhubung ke server + database) ================= */
 let sessionUser=null;
-const isFile=location.protocol==="file:";
-async function api(path,body){
-  if(isFile)throw new Error("Jalankan server dengan 'npm start', lalu buka http://localhost:3000");
-  let r;
-  try{r=await fetch(path,{method:body===undefined?"GET":"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:body===undefined?undefined:JSON.stringify(body)})}
-  catch{throw new Error("Tidak dapat terhubung ke server. Pastikan server sudah berjalan.")}
-  let j={};try{j=await r.json()}catch{}
-  if(!r.ok)throw new Error(j.error||"Terjadi kesalahan pada server");
-  return j;
-}
 function busy(btn,on){if(btn){btn.disabled=on;btn.style.opacity=on?".6":"1"}}
-function pingAuth(){try{localStorage.setItem("kopiBatinAuthPing",String(Date.now()))}catch{}}
 function switchAuth(type){
   document.getElementById("loginTab").classList.toggle("active",type==="login");
   document.getElementById("registerTab").classList.toggle("active",type==="register");
@@ -91,58 +84,45 @@ function switchAuth(type){
 }
 function currentUser(){return sessionUser}
 
-let resetState={email:"",token:""};
+let recovering=false;
 function showLogin(){switchAuth("login")}
 function showForgotPassword(){
-  ["loginTab","registerTab"].forEach(i=>document.getElementById(i).classList.remove("active"));
-  ["loginForm","registerForm"].forEach(i=>document.getElementById(i).classList.remove("active"));
-  document.getElementById("forgotForm").classList.add("active");
+  ["loginTab","registerTab"].forEach(i=>$(i).classList.remove("active"));
+  ["loginForm","registerForm"].forEach(i=>$(i).classList.remove("active"));
+  $("forgotForm").classList.add("active");
   showForgotStep(1);
 }
 function showForgotStep(step){
-  [1,2,3].forEach(n=>document.getElementById("resetStep"+n).classList.toggle("active",n===step));
-  if(step!==2)document.getElementById("demoCode").style.display="none";
+  [1,2,3].forEach(n=>$("resetStep"+n).classList.toggle("active",n===step));
 }
+// Langkah 1: kirim email berisi tautan reset (Supabase)
 async function requestReset(){
   const btn=document.querySelector("#resetStep1 .auth-submit");
-  const email=document.getElementById("resetEmail").value.trim().toLowerCase();
+  const email=$("resetEmail").value.trim();
   if(!email){toast("Masukkan email terlebih dahulu");return}
+  if(!SUPABASE_URL_OK){toast("Konfigurasi Supabase salah: cek SUPABASE_URL di script.js");return}
   busy(btn,true);
   try{
-    const r=await api("/api/forgot",{email});
-    resetState={email,token:""};
-    document.getElementById("resetCode").value="";
-    const demo=document.getElementById("demoCode");
-    if(r.devCode){demo.innerHTML="<b>Mode Pengembangan:</b> kode verifikasi Anda <strong>"+r.devCode+"</strong>. Pada mode produksi kode hanya dikirim lewat email.";demo.style.display="block"}
-    else demo.style.display="none";
-    showForgotStep(2);
-    toast(r.message||"Kode verifikasi dikirim");
+    const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    if(error)throw error;
+    toast("Jika email terdaftar, tautan reset telah dikirim. Cek inbox Anda.");
+    showLogin();
   }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
-async function verifyResetCode(){
-  const btn=document.querySelector("#resetStep2 .auth-submit");
-  const code=document.getElementById("resetCode").value.trim();
-  if(!/^\d{6}$/.test(code)){toast("Kode terdiri dari 6 angka");return}
-  busy(btn,true);
-  try{
-    const r=await api("/api/verify-reset",{email:resetState.email,code});
-    resetState.token=r.resetToken;
-    showForgotStep(3);toast("Kode terverifikasi");
-  }catch(err){toast(err.message)}finally{busy(btn,false)}
-}
+// Langkah 3: simpan password baru setelah pengguna membuka tautan di email
 async function resetPassword(){
   const btn=document.querySelector("#resetStep3 .auth-submit");
-  const p1=document.getElementById("newPassword").value;
-  const p2=document.getElementById("newPasswordConfirm").value;
+  const p1=$("newPassword").value, p2=$("newPasswordConfirm").value;
   if(p1.length<8){toast("Password minimal 8 karakter");return}
   if(p1!==p2){toast("Konfirmasi password tidak cocok");return}
   busy(btn,true);
   try{
-    await api("/api/reset",{email:resetState.email,resetToken:resetState.token,password:p1,confirm:p2});
-    resetState={email:"",token:""};
-    ["newPassword","newPasswordConfirm","resetEmail","resetCode"].forEach(i=>document.getElementById(i).value="");
-    showLogin();pingAuth();
-    toast("Password berhasil direset. Silakan login.");
+    const {error}=await supabaseClient.auth.updateUser({password:p1});
+    if(error)throw error;
+    ["newPassword","newPasswordConfirm","resetEmail"].forEach(i=>$(i).value="");
+    recovering=false;
+    toast("Password berhasil diubah.");
+    showAuth();
   }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
 
@@ -153,9 +133,10 @@ function setUser(u){
 }
 async function showAuth(){
 
-  const {
-    data: { session }
-  } = await supabaseClient.auth.getSession();
+  let session = null;
+  try {
+    ({ data: { session } } = await supabaseClient.auth.getSession());
+  } catch (err) { console.error(err); }
 
   if (!session) {
     setUser(null);
@@ -183,6 +164,7 @@ function updateUserUI(){
 }
 async function login(e){
   e.preventDefault();
+  if (!SUPABASE_URL_OK) { toast("Konfigurasi Supabase salah: cek SUPABASE_URL di script.js"); return; }
 
   const btn = e.target.querySelector(".auth-submit");
   busy(btn, true);
@@ -225,6 +207,7 @@ async function login(e){
 
 async function register(e){
   e.preventDefault();
+  if (!SUPABASE_URL_OK) { toast("Konfigurasi Supabase salah: cek SUPABASE_URL di script.js"); return; }
 
   const btn = e.target.querySelector(".auth-submit");
   const name = document.getElementById("regName").value.trim();
@@ -320,6 +303,16 @@ showAuth();
 supabaseClient.auth.onAuthStateChange(
   (event, session) => {
 
+    if (event === "PASSWORD_RECOVERY") {
+      recovering = true;
+      $("authScreen").classList.remove("hidden");
+      showForgotPassword();
+      showForgotStep(3);
+      return;
+    }
+
+    if (recovering) return;
+
     if (session) {
 
       const user = session.user;
@@ -391,7 +384,6 @@ window.addEventListener("storage",e=>{
     toast("Data diperbarui otomatis dari tab lain");
   }
   else if(e.key===actKey){activity=JSON.parse(e.newValue||"[]");renderActivity(activity[0]&&activity[0].t)}
-  else if(e.key==="kopiBatinAuthPing"){showAuth()}   // login/logout ikut tersinkron
 });
 
 /* Indikator koneksi */

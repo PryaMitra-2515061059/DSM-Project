@@ -109,23 +109,16 @@
     <div class="auth-form" id="forgotForm">
       <div id="resetStep1" class="reset-step active">
         <div class="auth-field"><label>Email Terdaftar</label><input id="resetEmail" type="email" placeholder="nama@email.com"></div>
-        <button type="button" class="auth-submit" onclick="requestReset()">Kirim Kode Reset</button>
-        <div class="auth-note">Masukkan email yang digunakan saat register. Kode 6 angka dikirim ke email tersebut dan berlaku 10 menit.</div>
+        <button type="button" class="auth-submit" onclick="requestReset()">Kirim Tautan Reset</button>
+        <div class="auth-note">Masukkan email yang digunakan saat register. Tautan untuk membuat password baru akan dikirim ke email tersebut.</div>
         <span class="back-auth" onclick="showLogin()">← Kembali ke Login</span>
-      </div>
-
-      <div id="resetStep2" class="reset-step">
-        <div class="auth-field"><label>Kode Verifikasi</label><input id="resetCode" class="reset-code" inputmode="numeric" maxlength="6" placeholder="000000"></div>
-        <div id="demoCode" class="demo-code"></div>
-        <button type="button" class="auth-submit" onclick="verifyResetCode()">Verifikasi Kode</button>
-        <span class="back-auth" onclick="showForgotStep(1)">← Gunakan email lain</span>
       </div>
 
       <div id="resetStep3" class="reset-step">
         <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="8" maxlength="128" placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
         <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="8" maxlength="128" placeholder="Ulangi password baru" autocomplete="new-password"></div>
         <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
-        <div class="auth-note">Gunakan minimal 8 karakter. Setelah reset, Anda akan keluar dari semua perangkat.</div>
+        <div class="auth-note">Gunakan minimal 8 karakter. </div>
       </div>
     </div>
 
@@ -136,13 +129,13 @@
       <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="8" maxlength="128" required placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
       <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="8" maxlength="128" required placeholder="Ulangi password" autocomplete="new-password"></div>
       <button class="auth-submit">Buat Akun Member</button>
-      <div class="auth-note">Data akun disimpan di database server. Password disimpan dalam bentuk hash, bukan teks asli.</div>
+      <div class="auth-note">Akun dikelola oleh Supabase Auth. Password disimpan dalam bentuk hash, bukan teks asli.</div>
     </form>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
