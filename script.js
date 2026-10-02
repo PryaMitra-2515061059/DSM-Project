@@ -1,8 +1,4 @@
-/* ================= KONFIGURASI SUPABASE =================
-   Salin "Project URL" dan "Publishable/anon key" persis dari:
-   Supabase Dashboard -> Project Settings -> API
-   Project ref harus 20 karakter (huruf kecil), contoh: abcdefghijklmnopqrst */
-const SUPABASE_URL = "https://yidwhtzcuethnjtnjfw.supabase.co";
+const SUPABASE_URL = "https://yidwhtzcuethnjtnfjfw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bf7ACxh-D-OkSCUp7877_A_SXXbzVi0";
 
 const SUPABASE_REF = (SUPABASE_URL.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/) || [])[1] || "";
@@ -11,64 +7,121 @@ if (!SUPABASE_URL_OK) console.error("SUPABASE_URL tidak valid: project ref harus
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-const seed=[
-{id:1,name:"Raka Pratama",phone:"081234567890",email:"raka@email.com",joined:"2026-08-05",note:"Mahasiswa",transactions:[
-{date:"2026-09-27",product:"Kopi Susu Batin",qty:2,amount:30000},{date:"2026-09-20",product:"Brownies",qty:1,amount:18000},{date:"2026-09-10",product:"Matcha Latte",qty:1,amount:22000}]},
-{id:2,name:"Nadia Putri",phone:"082198765432",email:"",joined:"2026-08-14",note:"",transactions:[
-{date:"2026-09-26",product:"Americano",qty:1,amount:18000},{date:"2026-09-14",product:"Brownies",qty:2,amount:36000}]},
-{id:3,name:"Fajar Ramadhan",phone:"085712345678",email:"fajar@email.com",joined:"2026-07-21",note:"",transactions:[
-{date:"2026-09-25",product:"Kopi Susu Batin",qty:1,amount:15000}]},
-{id:4,name:"Citra Lestari",phone:"081376543210",email:"",joined:"2026-09-02",note:"",transactions:[
-{date:"2026-09-24",product:"Matcha Latte",qty:2,amount:44000},{date:"2026-09-17",product:"Kopi Susu Batin",qty:1,amount:15000},{date:"2026-09-03",product:"Brownies",qty:1,amount:18000},{date:"2026-08-28",product:"Americano",qty:1,amount:18000}]}
-];
-let data=JSON.parse(localStorage.getItem("kopiBatinCustomers")||"null")||seed;
-const $=id=>document.getElementById(id);
+/* ================= DATA PELANGGAN (Supabase: tabel customers & transactions) =================
+   Baris pelanggan TIDAK lagi memakai data contoh (seed) atau localStorage.
+   Setiap akun baru yang register otomatis dibuatkan satu baris pelanggan oleh
+   trigger database (lihat supabase.sql). Tabel ini selalu mengikuti isi
+   sebenarnya dari database, dan ikut berubah secara real-time lewat
+   Supabase Realtime (lihat bagian FITUR REAL-TIME di akhir file). */
+let data=[];
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
-const initials=n=>n.split(" ").map(x=>x[0]).slice(0,2).join("").toUpperCase();
-function persist(){localStorage.setItem("kopiBatinCustomers",JSON.stringify(data));markSync()}
+const initials=n=>(n||"?").trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
+
 function totals(c){return {visits:c.transactions.length,items:c.transactions.reduce((a,t)=>a+Number(t.qty),0),spend:c.transactions.reduce((a,t)=>a+Number(t.amount),0),last:c.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date))[0]?.date||null}}
+
+// Ambil ulang seluruh data pelanggan + transaksi langsung dari database.
+async function loadCustomers(){
+  const {data:rows,error}=await supabaseClient
+    .from("customers")
+    .select("id,user_id,name,phone,email,joined,note,transactions(id,date,product,qty,amount)")
+    .order("created_at",{ascending:false});
+  if(error){toast("Gagal memuat data pelanggan: "+error.message);return}
+  data=(rows||[]).map(c=>({...c,transactions:c.transactions||[]}));
+  render();
+}
+
 function render(){
- const q=document.getElementById("search").value.toLowerCase(), s=document.getElementById("sort").value;
+ const q=$("search").value.toLowerCase(), s=$("sort").value;
  let arr=data.filter(c=>(c.name+" "+c.phone).toLowerCase().includes(q));
  arr.sort((a,b)=>{let A=totals(a),B=totals(b); if(s==="name")return a.name.localeCompare(b.name);if(s==="visits")return B.visits-A.visits;if(s==="spend")return B.spend-A.spend;return (B.last||"").localeCompare(A.last||"")});
- const body=document.getElementById("tbody");
- body.innerHTML=arr.length?arr.map(c=>{let t=totals(c);return `<tr>
- <td><div class="customer"><div class="avatar">${initials(c.name)}</div><div><div class="name">${c.name}</div><div class="phone">${c.phone}</div></div></div></td>
- <td><b>${t.visits}</b> <span class="muted">kali</span></td><td><b>${t.items}</b> <span class="muted">item</span></td><td class="money">${rupiah(t.spend)}</td><td>${fmtDate(t.last)}</td><td><span class="status">Aktif</span></td>
- <td><div class="actions"><button class="icon-btn title" title="Detail" onclick="detail(${c.id})">◉</button><button class="icon-btn" title="Tambah transaksi" onclick="openTransaction(${c.id})">＋</button><button class="icon-btn" title="Edit" onclick="openCustomer(${c.id})">✎</button><button class="icon-btn" title="Hapus" onclick="removeCustomer(${c.id})">⌫</button></div></td>
- </tr>`}).join(""):`<tr><td colspan="7"><div class="empty">Data pelanggan tidak ditemukan.</div></td></tr>`;
- document.getElementById("statCustomers").textContent=data.length;
- document.getElementById("statVisits").textContent=data.reduce((a,c)=>a+totals(c).visits,0);
- document.getElementById("statItems").textContent=data.reduce((a,c)=>a+totals(c).items,0);
- document.getElementById("statRevenue").textContent=rupiah(data.reduce((a,c)=>a+totals(c).spend,0));
+ const body=$("tbody");
+ body.innerHTML=arr.length?arr.map(c=>{let t=totals(c);const acc=c.user_id?'<span class="status">Akun Terdaftar</span>':'<span class="status off">Tanpa Akun</span>';return `<tr>
+ <td><div class="customer"><div class="avatar">${initials(c.name)}</div><div><div class="name">${esc(c.name)}</div><div class="phone">${esc(c.phone)}</div></div></div></td>
+ <td><b>${t.visits}</b> <span class="muted">kali</span></td><td><b>${t.items}</b> <span class="muted">item</span></td><td class="money">${rupiah(t.spend)}</td><td>${fmtDate(t.last)}</td><td>${acc}</td>
+ <td><div class="actions"><button class="icon-btn title" title="Detail" onclick="detail('${c.id}')">◉</button><button class="icon-btn" title="Tambah transaksi" onclick="openTransaction('${c.id}')">＋</button><button class="icon-btn" title="Edit" onclick="openCustomer('${c.id}')">✎</button><button class="icon-btn" title="Hapus" onclick="removeCustomer('${c.id}')">⌫</button></div></td>
+ </tr>`}).join(""):`<tr><td colspan="7"><div class="empty">Belum ada pelanggan. Baris baru muncul otomatis saat ada akun yang register.</div></td></tr>`;
+ $("statCustomers").textContent=data.length;
+ $("statVisits").textContent=data.reduce((a,c)=>a+totals(c).visits,0);
+ $("statItems").textContent=data.reduce((a,c)=>a+totals(c).items,0);
+ $("statRevenue").textContent=rupiah(data.reduce((a,c)=>a+totals(c).spend,0));
 }
+
 function openCustomer(id=null){
- document.getElementById("customerModal").classList.add("show");
- document.getElementById("modalTitle").textContent=id?"Edit Pelanggan":"Tambah Pelanggan";
- document.getElementById("customerId").value=id||"";
+ $("customerModal").classList.add("show");
+ $("modalTitle").textContent=id?"Edit Pelanggan":"Tambah Pelanggan";
+ $("customerId").value=id||"";
  if(id){let c=data.find(x=>x.id===id);$("name").value=c.name;$("phone").value=c.phone;$("email").value=c.email||"";$("joined").value=c.joined;$("note").value=c.note||""}
  else{document.querySelector("#customerModal form").reset();$("joined").value=new Date().toISOString().slice(0,10)}
 }
-function saveCustomer(e){e.preventDefault();let id=Number($("customerId").value);let obj={id:id||Date.now(),name:$("name").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),joined:$("joined").value,note:$("note").value.trim(),transactions:[]};
- if(id){let old=data.find(x=>x.id===id);obj.transactions=old.transactions;data=data.map(x=>x.id===id?obj:x);toast("Data pelanggan diperbarui");logActivity("Data pelanggan <b>"+esc(obj.name)+"</b> diperbarui","edit")}
- else{data.unshift(obj);toast("Pelanggan berhasil ditambahkan");logActivity("Pelanggan baru <b>"+esc(obj.name)+"</b> ditambahkan","add")}
- persist();render();closeModal("customerModal")}
-function openTransaction(id){trxCustomerId.value=id;product.value="";qty.value=1;amount.value="";trxDate.value=new Date().toISOString().slice(0,10);document.getElementById("transactionModal").classList.add("show")}
-function saveTransaction(e){e.preventDefault();let c=data.find(x=>x.id===Number(trxCustomerId.value));c.transactions.push({date:trxDate.value,product:product.value.trim(),qty:Number(qty.value),amount:Number(amount.value)});persist();render();closeModal("transactionModal");toast("Transaksi berhasil dicatat");logActivity("<b>"+esc(c.name)+"</b> membeli "+esc(product.value.trim())+" ("+Number(qty.value)+" item) senilai "+rupiah(Number(amount.value)),"trx")}
-function detail(id){let c=data.find(x=>x.id===id),t=totals(c);document.getElementById("detailContent").innerHTML=`
-<div class="detail-profile"><div class="big-avatar">${initials(c.name)}</div><div><h3>${c.name}</h3><p>${c.phone}${c.email?" · "+c.email:""}</p></div></div>
+
+async function saveCustomer(e){
+ e.preventDefault();
+ const id=$("customerId").value||null;
+ const payload={name:$("name").value.trim(),phone:$("phone").value.trim(),email:$("email").value.trim(),joined:$("joined").value,note:$("note").value.trim()};
+ const btn=e.target.closest(".modal").querySelector(".btn.primary");
+ busy(btn,true);
+ try{
+  if(id){
+   const {error}=await supabaseClient.from("customers").update({...payload,updated_by:(currentUser()||{}).name||null}).eq("id",id);
+   if(error)throw error;
+   toast("Data pelanggan diperbarui");
+  }else{
+   const {error}=await supabaseClient.from("customers").insert({...payload,created_by:(currentUser()||{}).name||null});
+   if(error)throw error;
+   toast("Pelanggan berhasil ditambahkan");
+  }
+  closeModal("customerModal");
+  await loadCustomers();
+ }catch(err){toast("Gagal menyimpan: "+err.message)}finally{busy(btn,false)}
+}
+
+function openTransaction(id){$("trxCustomerId").value=id;$("product").value="";$("qty").value=1;$("amount").value="";$("trxDate").value=new Date().toISOString().slice(0,10);$("transactionModal").classList.add("show")}
+
+async function saveTransaction(e){
+ e.preventDefault();
+ const customer_id=$("trxCustomerId").value;
+ const payload={customer_id,date:$("trxDate").value,product:$("product").value.trim(),qty:Number($("qty").value),amount:Number($("amount").value),created_by:(currentUser()||{}).name||null};
+ const btn=e.target.closest(".modal").querySelector(".btn.primary");
+ busy(btn,true);
+ try{
+  const {error}=await supabaseClient.from("transactions").insert(payload);
+  if(error)throw error;
+  closeModal("transactionModal");
+  toast("Transaksi berhasil dicatat");
+  await loadCustomers();
+ }catch(err){toast("Gagal menyimpan transaksi: "+err.message)}finally{busy(btn,false)}
+}
+
+function detail(id){
+ let c=data.find(x=>x.id===id); if(!c)return;
+ let t=totals(c);
+ const acc=c.user_id?'<span class="status">Akun Terdaftar</span>':'<span class="status off">Tanpa Akun</span>';
+ $("detailContent").innerHTML=`
+<div class="detail-profile"><div class="big-avatar">${initials(c.name)}</div><div><h3>${esc(c.name)}</h3><p>${esc(c.phone)}${c.email?" · "+esc(c.email):""}</p><p style="margin-top:6px">${acc}</p></div></div>
 <div class="mini-stats"><div class="mini"><small>Kunjungan</small><b>${t.visits} kali</b></div><div class="mini"><small>Jumlah item</small><b>${t.items} item</b></div><div class="mini"><small>Total pembelian</small><b>${rupiah(t.spend)}</b></div></div>
 <div class="history-title">Riwayat Pembelian</div>
-${c.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="history-item"><div><b>${x.product}</b><small>${fmtDate(x.date)} · ${x.qty} item</small></div><b>${rupiah(x.amount)}</b></div>`).join("")||'<div class="empty">Belum ada riwayat pembelian.</div>'}`;
-document.getElementById("detailModal").classList.add("show")}
-function removeCustomer(id){let c=data.find(x=>x.id===id);if(confirm("Hapus data pelanggan "+c.name+"?")){data=data.filter(x=>x.id!==id);persist();render();toast("Data pelanggan dihapus");logActivity("Data pelanggan <b>"+esc(c.name)+"</b> dihapus","del")}}
-function closeModal(id){document.getElementById(id).classList.remove("show")}
-function resetFilter(){search.value="";sort.value="latest";render()}
-function toast(msg){let el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2200)}
+${c.transactions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="history-item"><div><b>${esc(x.product)}</b><small>${fmtDate(x.date)} · ${x.qty} item</small></div><b>${rupiah(x.amount)}</b></div>`).join("")||'<div class="empty">Belum ada riwayat pembelian.</div>'}`;
+ $("detailModal").classList.add("show")
+}
+
+async function removeCustomer(id){
+ let c=data.find(x=>x.id===id); if(!c)return;
+ if(!confirm("Hapus data pelanggan "+c.name+"?"+(c.user_id?" Akun login pelanggan ini TIDAK ikut terhapus, hanya baris datanya.":"")))return;
+ try{
+  const {error}=await supabaseClient.from("customers").delete().eq("id",id);
+  if(error)throw error;
+  toast("Data pelanggan dihapus");
+  await loadCustomers();
+ }catch(err){toast("Gagal menghapus: "+err.message)}
+}
+
+function closeModal(id){$(id).classList.remove("show")}
+function resetFilter(){$("search").value="";$("sort").value="latest";render()}
+function toast(msg){let el=$("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2200)}
 function showComing(e,name){e.preventDefault();toast(name+" belum termasuk modul inti.")}
 function exportCSV(){
- const rows=[["Nama","No WhatsApp","Kunjungan","Jumlah Pembelian","Total Pembelian","Terakhir Berkunjung"],...data.map(c=>{let t=totals(c);return[c.name,c.phone,t.visits,t.items,t.spend,t.last||""]})];
+ const rows=[["Nama","No WhatsApp","Status Akun","Kunjungan","Jumlah Pembelian","Total Pembelian","Terakhir Berkunjung"],...data.map(c=>{let t=totals(c);return[c.name,c.phone,c.user_id?"Akun Terdaftar":"Tanpa Akun",t.visits,t.items,t.spend,t.last||""]})];
  const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="data-pelanggan-kopi-batin.csv";a.click();URL.revokeObjectURL(a.href);toast("CSV berhasil diekspor")}
 
@@ -126,10 +179,19 @@ async function resetPassword(){
   }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
 
+let realtimeStarted=false;
 function setUser(u){
   sessionUser=u||null;
   document.getElementById("authScreen").classList.toggle("hidden",!!sessionUser);
   updateUserUI();
+  if(sessionUser){
+    loadCustomers();
+    startRealtimeOnce();
+  }else{
+    data=[];render();
+    supabaseClient.removeAllChannels();
+    realtimeStarted=false;
+  }
 }
 async function showAuth(){
 
@@ -340,13 +402,18 @@ supabaseClient.auth.onAuthStateChange(
 render();
 
 
-/* ================= FITUR REAL-TIME =================*/
-const actKey="kopiBatinActivity", custKey="kopiBatinCustomers";
-let activity=JSON.parse(localStorage.getItem(actKey)||"[]");
-const esc=t=>String(t).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+/* ================= FITUR REAL-TIME =================
+   Tabel Data Pelanggan dan feed di bawah ini terhubung langsung ke database
+   lewat Supabase Realtime (WebSocket) -- bukan lagi event "storage" di
+   localStorage. Begitu ada perubahan di tabel customers/transactions (oleh
+   siapa pun, dari perangkat mana pun, termasuk trigger pendaftaran akun
+   baru), semua tab/perangkat yang sedang login langsung memuat ulang data
+   dan menampilkan aktivitasnya di sini -- tanpa refresh. */
+let activity=[];
+const esc=t=>String(t??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
 function tickClock(){
-  const el=document.getElementById("liveClock"); if(!el)return;
+  const el=$("liveClock"); if(!el)return;
   el.textContent=new Date().toLocaleTimeString("id-ID",{hour12:false})+" WIB";
 }
 function timeAgo(ts){
@@ -358,33 +425,54 @@ function timeAgo(ts){
 }
 const actIcon={add:"＋",edit:"✎",trx:"☕",del:"⌫"};
 function renderActivity(freshTs){
-  const box=document.getElementById("activityList"); if(!box)return;
+  const box=$("activityList"); if(!box)return;
   box.innerHTML=activity.length?activity.slice(0,8).map(a=>`<div class="act-item${a.t===freshTs?" new":""}">
     <div class="act-ico ${a.type==="trx"?"trx":a.type==="del"?"del":""}">${actIcon[a.type]||"•"}</div>
-    <div class="act-body">${a.text}<small>oleh ${esc(a.by)}</small></div>
+    <div class="act-body">${a.text}${a.by?`<small>oleh ${esc(a.by)}</small>`:""}</div>
     <div class="act-time" data-ts="${a.t}">${timeAgo(a.t)}</div></div>`).join("")
-    :'<div class="empty">Belum ada aktivitas. Tambah pelanggan atau catat pembelian untuk melihat pembaruan langsung.</div>';
+    :'<div class="empty">Belum ada aktivitas. Daftarkan akun atau catat pembelian untuk melihat pembaruan langsung.</div>';
 }
-function logActivity(text,type){
-  const item={t:Date.now(),text,type,by:(currentUser()||{}).name||"Sistem"};
+function logActivity(text,type,by){
+  const item={t:Date.now(),text,type,by:by||null};
   activity.unshift(item); activity=activity.slice(0,30);
-  localStorage.setItem(actKey,JSON.stringify(activity));
   renderActivity(item.t); flashStats();
 }
 function flashStats(){
   document.querySelectorAll(".stat .num").forEach(n=>{n.classList.remove("flash");void n.offsetWidth;n.classList.add("flash")});
 }
-function markSync(){} // titik kait bila nanti dihubungkan ke backend
 
-/* Sinkronisasi antar tab: event "storage" hanya terpicu di tab LAIN */
-window.addEventListener("storage",e=>{
-  if(e.key===custKey){
-    data=JSON.parse(e.newValue||"null")||seed;
-    render();flashStats();
-    toast("Data diperbarui otomatis dari tab lain");
+/* Berlangganan perubahan tabel customers & transactions lewat Supabase Realtime.
+   Dipanggil sekali setiap sesi login (lihat setUser). */
+function startRealtimeOnce(){
+  if(realtimeStarted)return; realtimeStarted=true;
+  supabaseClient.channel("customers-rt")
+    .on("postgres_changes",{event:"*",schema:"public",table:"customers"},payload=>reactToChange("customers",payload))
+    .subscribe();
+  supabaseClient.channel("transactions-rt")
+    .on("postgres_changes",{event:"*",schema:"public",table:"transactions"},payload=>reactToChange("transactions",payload))
+    .subscribe();
+}
+function reactToChange(table,payload){
+  const row=payload.new||payload.old||{};
+  if(table==="customers"){
+    if(payload.eventType==="INSERT"){
+      const by=row.created_by;
+      logActivity(by?("Pelanggan baru <b>"+esc(row.name)+"</b> ditambahkan"):("Akun baru <b>"+esc(row.name)+"</b> mendaftar sebagai pelanggan"),"add",by);
+    }else if(payload.eventType==="UPDATE"){
+      logActivity("Data pelanggan <b>"+esc(row.name)+"</b> diperbarui","edit",row.updated_by);
+    }else if(payload.eventType==="DELETE"){
+      logActivity("Data pelanggan <b>"+esc(row.name||"")+"</b> dihapus","del",row.updated_by);
+    }
+  }else{
+    if(payload.eventType==="INSERT"){
+      const c=data.find(x=>x.id===row.customer_id);
+      logActivity("<b>"+esc(c?c.name:"Pelanggan")+"</b> membeli "+esc(row.product)+" ("+row.qty+" item) senilai "+rupiah(row.amount),"trx",row.created_by);
+    }else if(payload.eventType==="DELETE"){
+      logActivity("Transaksi "+esc(row.product||"")+" dihapus","del",row.created_by);
+    }
   }
-  else if(e.key===actKey){activity=JSON.parse(e.newValue||"[]");renderActivity(activity[0]&&activity[0].t)}
-});
+  loadCustomers();
+}
 
 /* Indikator koneksi */
 function setOnline(){
