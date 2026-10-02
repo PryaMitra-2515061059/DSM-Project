@@ -7,12 +7,6 @@ if (!SUPABASE_URL_OK) console.error("SUPABASE_URL tidak valid: project ref harus
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-/* ================= DATA PELANGGAN (Supabase: tabel customers & transactions) =================
-   Baris pelanggan TIDAK lagi memakai data contoh (seed) atau localStorage.
-   Setiap akun baru yang register otomatis dibuatkan satu baris pelanggan oleh
-   trigger database (lihat supabase.sql). Tabel ini selalu mengikuti isi
-   sebenarnya dari database, dan ikut berubah secara real-time lewat
-   Supabase Realtime (lihat bagian FITUR REAL-TIME di akhir file). */
 let data=[];
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
