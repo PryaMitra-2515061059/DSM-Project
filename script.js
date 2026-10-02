@@ -7,6 +7,12 @@ if (!SUPABASE_URL_OK) console.error("SUPABASE_URL tidak valid: project ref harus
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+/* ================= DATA PELANGGAN (Supabase: tabel customers & transactions) =================
+   Baris pelanggan TIDAK lagi memakai data contoh (seed) atau localStorage.
+   Setiap akun baru yang register otomatis dibuatkan satu baris pelanggan oleh
+   trigger database (lihat supabase.sql). Tabel ini selalu mengikuti isi
+   sebenarnya dari database, dan ikut berubah secara real-time lewat
+   Supabase Realtime (lihat bagian FITUR REAL-TIME di akhir file). */
 let data=[];
 const rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n);
 const fmtDate=d=>d?new Date(d+"T00:00:00").toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"}):"-";
@@ -406,10 +412,27 @@ render();
 let activity=[];
 const esc=t=>String(t??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
+// Jam selalu menampilkan WIB (Asia/Jakarta) secara eksplisit, apa pun zona
+// waktu perangkat pengguna -- sebelumnya jam memakai zona waktu perangkat
+// tapi labelnya tetap "WIB", sehingga salah bila perangkat diatur ke zona
+// waktu lain. Penjadwalan juga disinkronkan ke awal setiap detik (bukan
+// setInterval biasa) supaya tidak drift, dan langsung disegarkan begitu tab
+// aktif lagi setelah sempat ditahan browser di latar belakang.
+let clockTimer=null;
 function tickClock(){
   const el=$("liveClock"); if(!el)return;
-  el.textContent=new Date().toLocaleTimeString("id-ID",{hour12:false})+" WIB";
+  const now=new Date();
+  const time=now.toLocaleTimeString("id-ID",{hour12:false,timeZone:"Asia/Jakarta"});
+  const date=now.toLocaleDateString("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric",timeZone:"Asia/Jakarta"});
+  el.textContent=time+" WIB";
+  el.title=date;
 }
+function scheduleClock(){
+  tickClock();
+  clearTimeout(clockTimer);
+  clockTimer=setTimeout(scheduleClock,1000-new Date().getMilliseconds());
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)tickClock()});
 function timeAgo(ts){
   const d=Math.floor((Date.now()-ts)/1000);
   if(d<10)return "baru saja"; if(d<60)return d+" detik lalu";
@@ -475,6 +498,5 @@ function setOnline(){
 }
 window.addEventListener("online",setOnline);window.addEventListener("offline",setOnline);
 
-tickClock();renderActivity();setOnline();
-setInterval(tickClock,1000);
+scheduleClock();renderActivity();setOnline();
 setInterval(()=>document.querySelectorAll(".act-time").forEach(el=>el.textContent=timeAgo(Number(el.dataset.ts))),15000);
