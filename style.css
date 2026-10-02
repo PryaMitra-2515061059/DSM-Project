@@ -67,3 +67,18 @@ table{width:100%;border-collapse:collapse}th{font-size:10px;text-transform:upper
 tr.row-flash td{animation:actIn 1.4s ease}
 @media(max-width:600px){.live-box{align-self:stretch}}
 @media(prefers-reduced-motion:reduce){.live-dot,.act-item.new,.stat .num.flash,tr.row-flash td{animation:none}}
+
+/* ===== Peran Admin vs Pembeli ===== */
+.hidden{display:none !important}
+
+#portalPicker{display:flex;flex-direction:column;gap:10px}
+.portal-choice{display:flex;align-items:center;gap:13px;border:1px solid var(--line);border-radius:12px;padding:15px;cursor:pointer;transition:.15s;text-align:left}
+.portal-choice:hover{border-color:var(--primary);background:#faf6f2}
+.portal-ico{font-size:22px;width:36px;text-align:center;flex:none}
+.portal-choice b{display:block;font-size:13px}
+.portal-choice small{display:block;color:#7b8390;font-size:11px;margin-top:3px;line-height:1.4}
+#authForms .back-auth{margin-bottom:15px}
+
+.buyer-app{min-height:100vh;background:var(--bg)}
+.buyer-main{max-width:960px;margin:0 auto;padding:28px 24px 40px}
+@media(max-width:600px){.buyer-main{padding:18px}}

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
+<div class="app hidden" id="adminApp">
 <aside class="sidebar">
   <div class="brand"><div class="logo">KB</div><div><b>Kopi Batin</b><small>Customer Information</small></div></div>
   <div class="nav-title">Menu Utama</div>
@@ -23,7 +23,7 @@
 </aside>
 
 <main class="main">
-  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Data Pelanggan</strong></div><div class="top-actions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small>Member</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
+  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Data Pelanggan</strong></div><div class="top-actions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small id="userRoleLabel">Admin</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
   <div class="page-head"><div><h1>Data Pelanggan</h1><p>Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div>
     <div class="live-box" title="Data tersinkron otomatis antar tab/jendela"><span class="live-dot"></span><div><b>Live</b><small id="liveClock">--:--:--</small></div></div>
   </div>
@@ -54,6 +54,37 @@
     <div id="activityList"></div>
   </section>
 </main>
+</div>
+
+<div class="buyer-app hidden" id="buyerApp">
+  <main class="buyer-main">
+    <div class="topbar">
+      <div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Dashboard Saya</strong></div>
+      <div class="top-actions">
+        <div class="user-menu">
+          <div class="user-chip"><div class="user-avatar" id="buyerAvatar">MB</div><div class="user-info"><b id="buyerName">Member</b><small>Pembeli</small></div></div>
+          <button class="btn" onclick="logout()">Keluar</button>
+        </div>
+      </div>
+    </div>
+    <div class="page-head"><div><h1>Dashboard Saya</h1><p>Profil dan riwayat pembelian Anda di Kopi Batin.</p></div></div>
+
+    <section class="stats">
+      <div class="stat"><div class="stat-top"><span>Kunjungan</span><div class="badge-icon">↻</div></div><div class="num" id="buyerVisits">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Jumlah Pembelian</span><div class="badge-icon">☕</div></div><div class="num" id="buyerItems">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Pembelian</span><div class="badge-icon">Rp</div></div><div class="num" id="buyerSpend">Rp0</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Profil Saya</h3></div>
+      <div class="detail" id="buyerProfile"></div>
+    </section>
+
+    <section class="panel activity">
+      <div class="panel-head"><h3>Riwayat Pembelian</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
+      <div id="buyerHistory"></div>
+    </section>
+  </main>
 </div>
 
 <div class="modal-back" id="customerModal">
@@ -91,46 +122,67 @@
 
 <div class="auth-back" id="authScreen">
   <div class="auth-card">
-    <div class="auth-brand"><div class="auth-logo">KB</div><h2>Kopi Batin</h2><p>Member Area · Data Pelanggan</p></div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="loginTab" onclick="switchAuth('login')">Login</button>
-      <button class="auth-tab" id="registerTab" onclick="switchAuth('register')">Register</button>
-    </div>
+    <div class="auth-brand"><div class="auth-logo">KB</div><h2>Kopi Batin</h2><p id="portalBadge">Pilih jenis akun untuk masuk</p></div>
 
-    <form class="auth-form active" id="loginForm" onsubmit="login(event)">
-      <div class="auth-field"><label>Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="nama@email.com"></div>
-      <div class="auth-field"><label>Password</label><input id="loginPassword" type="password" required placeholder="Masukkan password" autocomplete="current-password"></div>
-      <button class="auth-submit">Login ke Akun</button>
-      <a class="auth-link" onclick="showForgotPassword()">Lupa password?</a>
-      <div class="auth-note">Belum punya akun? Pilih tab Register untuk membuat akun member.</div>
-    </form>
-
-
-    <div class="auth-form" id="forgotForm">
-      <div id="resetStep1" class="reset-step active">
-        <div class="auth-field"><label>Email Terdaftar</label><input id="resetEmail" type="email" placeholder="nama@email.com"></div>
-        <button type="button" class="auth-submit" onclick="requestReset()">Kirim Tautan Reset</button>
-        <div class="auth-note">Masukkan email yang digunakan saat register. Tautan untuk membuat password baru akan dikirim ke email tersebut.</div>
-        <span class="back-auth" onclick="showLogin()">← Kembali ke Login</span>
+    <!-- Langkah 1: pengguna memilih mau masuk sebagai Pembeli (profil &
+         riwayat pembelian pribadi) atau Admin (kelola seluruh pelanggan).
+         Peran akun yang SEBENARNYA tetap ditentukan oleh database (lihat
+         supabase.sql) -- pilihan di sini hanya menentukan portal yang
+         dituju, dan akan dicocokkan ulang setelah login berhasil. -->
+    <div id="portalPicker">
+      <div class="portal-choice" onclick="choosePortal('pembeli')">
+        <div class="portal-ico">🛍️</div>
+        <div><b>Pembeli</b><small>Mau beli &amp; lihat profil/riwayat pembelian saya</small></div>
       </div>
-
-      <div id="resetStep3" class="reset-step">
-        <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="8" maxlength="128" placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
-        <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="8" maxlength="128" placeholder="Ulangi password baru" autocomplete="new-password"></div>
-        <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
-        <div class="auth-note">Gunakan minimal 8 karakter. </div>
+      <div class="portal-choice" onclick="choosePortal('admin')">
+        <div class="portal-ico">🛠️</div>
+        <div><b>Admin</b><small>Kelola seluruh data pelanggan Kopi Batin</small></div>
       </div>
     </div>
 
-    <form class="auth-form" id="registerForm" onsubmit="register(event)">
-      <div class="auth-field"><label>Nama Lengkap</label><input id="regName" required placeholder="Nama lengkap"></div>
-      <div class="auth-field"><label>No. WhatsApp</label><input id="regPhone" required inputmode="tel" placeholder="08xxxxxxxxxx"></div>
-      <div class="auth-field"><label>Email</label><input id="regEmail" type="email" required placeholder="nama@email.com"></div>
-      <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="8" maxlength="128" required placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
-      <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="8" maxlength="128" required placeholder="Ulangi password" autocomplete="new-password"></div>
-      <button class="auth-submit">Buat Akun Member</button>
-      <div class="auth-note">Akun dikelola oleh Supabase Auth. Password disimpan dalam bentuk hash, bukan teks asli.</div>
-    </form>
+    <div id="authForms" class="hidden">
+      <span class="back-auth" onclick="backToPortalPicker()">← Ganti jenis akun</span>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTab" onclick="switchAuth('login')">Login</button>
+        <button class="auth-tab" id="registerTab" onclick="switchAuth('register')">Register</button>
+      </div>
+
+      <form class="auth-form active" id="loginForm" onsubmit="login(event)">
+        <div class="auth-field"><label>Email</label><input id="loginEmail" type="email" required autocomplete="email" placeholder="nama@email.com"></div>
+        <div class="auth-field"><label>Password</label><input id="loginPassword" type="password" required placeholder="Masukkan password" autocomplete="current-password"></div>
+        <button class="auth-submit">Login ke Akun</button>
+        <a class="auth-link" onclick="showForgotPassword()">Lupa password?</a>
+        <div class="auth-note">Belum punya akun? Pilih tab Register untuk membuat akun.</div>
+      </form>
+
+      <div class="auth-form" id="forgotForm">
+        <div id="resetStep1" class="reset-step active">
+          <div class="auth-field"><label>Email Terdaftar</label><input id="resetEmail" type="email" placeholder="nama@email.com"></div>
+          <button type="button" class="auth-submit" onclick="requestReset()">Kirim Tautan Reset</button>
+          <div class="auth-note">Masukkan email yang digunakan saat register. Tautan untuk membuat password baru akan dikirim ke email tersebut.</div>
+          <span class="back-auth" onclick="showLogin()">← Kembali ke Login</span>
+        </div>
+
+        <div id="resetStep3" class="reset-step">
+          <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="8" maxlength="128" placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
+          <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="8" maxlength="128" placeholder="Ulangi password baru" autocomplete="new-password"></div>
+          <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
+          <div class="auth-note">Gunakan minimal 8 karakter. </div>
+        </div>
+      </div>
+
+      <form class="auth-form" id="registerForm" onsubmit="register(event)">
+        <div class="auth-field"><label>Nama Lengkap</label><input id="regName" required placeholder="Nama lengkap"></div>
+        <div class="auth-field"><label>No. WhatsApp</label><input id="regPhone" required inputmode="tel" placeholder="08xxxxxxxxxx"></div>
+        <div class="auth-field"><label>Email</label><input id="regEmail" type="email" required placeholder="nama@email.com"></div>
+        <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="8" maxlength="128" required placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
+        <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="8" maxlength="128" required placeholder="Ulangi password" autocomplete="new-password"></div>
+        <button class="auth-submit">Buat Akun Pembeli</button>
+        <div class="auth-note">Akun dikelola oleh Supabase Auth. Password disimpan dalam bentuk hash, bukan teks asli.</div>
+      </form>
+
+      <div class="auth-note hidden" id="adminRegisterNote">Akun Admin tidak bisa dibuat sendiri lewat form ini. Hubungi pengelola sistem Kopi Batin untuk dibuatkan akun.</div>
+    </div>
   </div>
 </div>
 

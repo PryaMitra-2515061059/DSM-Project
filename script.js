@@ -125,19 +125,91 @@ function exportCSV(){
  const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="data-pelanggan-kopi-batin.csv";a.click();URL.revokeObjectURL(a.href);toast("CSV berhasil diekspor")}
 
-/* ================= AUTENTIKASI (terhubung ke server + database) ================= */
-let sessionUser=null;
-function busy(btn,on){if(btn){btn.disabled=on;btn.style.opacity=on?".6":"1"}}
-function switchAuth(type){
-  document.getElementById("loginTab").classList.toggle("active",type==="login");
-  document.getElementById("registerTab").classList.toggle("active",type==="register");
-  document.getElementById("loginForm").classList.toggle("active",type==="login");
-  document.getElementById("registerForm").classList.toggle("active",type==="register");
-  document.getElementById("forgotForm").classList.remove("active");
+/* ================= DASHBOARD PEMBELI (profil & riwayat pribadi) =================
+   Hanya untuk akun role='pembeli'. Berbeda dari dashboard Admin, di sini
+   pengguna cuma melihat profil dan riwayat pembeliannya SENDIRI -- baik di
+   tampilan maupun di database (lihat kebijakan RLS "pembeli hanya baris
+   sendiri" pada supabase.sql, bukan cuma disembunyikan di layar). */
+let buyerRealtimeStarted=false, myCustomerId=null;
+
+async function loadMyProfile(){
+  if(!sessionUser)return;
+  const profile=await fetchMyProfile(sessionUser.id);
+  if(!profile){toast("Profil Anda tidak ditemukan. Hubungi admin.");return}
+  myCustomerId=profile.id;
+  const {data:trx,error}=await supabaseClient.from("transactions")
+    .select("id,date,product,qty,amount")
+    .eq("customer_id",profile.id)
+    .order("date",{ascending:false});
+  const transactions=error?[]:(trx||[]);
+  const t=totals({transactions});
+  $("buyerVisits").textContent=t.visits;
+  $("buyerItems").textContent=t.items;
+  $("buyerSpend").textContent=rupiah(t.spend);
+  $("buyerAvatar").textContent=initials(profile.name);
+  $("buyerName").textContent=profile.name;
+  $("buyerProfile").innerHTML=`
+    <div class="detail-profile"><div class="big-avatar">${initials(profile.name)}</div><div><h3>${esc(profile.name)}</h3><p>${esc(profile.phone)}${profile.email?" · "+esc(profile.email):""}</p></div></div>
+    <div class="mini-stats">
+      <div class="mini"><small>Bergabung sejak</small><b>${fmtDate(profile.joined)}</b></div>
+      <div class="mini"><small>Catatan</small><b>${esc(profile.note)||"-"}</b></div>
+    </div>`;
+  $("buyerHistory").innerHTML=transactions.length?transactions.map(x=>`<div class="history-item"><div><b>${esc(x.product)}</b><small>${fmtDate(x.date)} · ${x.qty} item</small></div><b>${rupiah(x.amount)}</b></div>`).join(""):'<div class="empty">Belum ada riwayat pembelian. Riwayat akan muncul otomatis setelah ada transaksi atas nama Anda.</div>';
 }
+
+function startBuyerRealtimeOnce(){
+  if(buyerRealtimeStarted)return; buyerRealtimeStarted=true;
+  supabaseClient.channel("buyer-rt")
+    .on("postgres_changes",{event:"*",schema:"public",table:"transactions"},()=>loadMyProfile())
+    .on("postgres_changes",{event:"*",schema:"public",table:"customers"},()=>loadMyProfile())
+    .subscribe();
+}
+
+/* ================= AUTENTIKASI & PERAN (Admin vs Pembeli) =================
+   Setiap akun punya SATU peran tersimpan di kolom customers.role ('admin'
+   atau 'pembeli'), ditentukan oleh database -- bukan oleh tombol yang
+   diklik di layar login. Layar login hanya menentukan portal yang DITUJU
+   (authPortal); begitu login berhasil, peran asli akun dicocokkan dengan
+   portal tersebut. Kalau tidak cocok, pengguna langsung dikeluarkan lagi
+   dengan pesan yang jelas, supaya akun Pembeli tidak bisa "menebak" masuk
+   ke dashboard Admin dan sebaliknya. Pemisahan ini juga ditegakkan di sisi
+   database lewat RLS (lihat supabase.sql), bukan cuma disembunyikan di
+   tampilan. */
+let sessionUser=null, sessionRole=null, authPortal=null, recovering=false, authFlowBusy=false;
+
+function busy(btn,on){if(btn){btn.disabled=on;btn.style.opacity=on?".6":"1"}}
 function currentUser(){return sessionUser}
 
-let recovering=false;
+function choosePortal(type){
+  authPortal=type;
+  $("portalPicker").classList.add("hidden");
+  $("authForms").classList.remove("hidden");
+  $("portalBadge").textContent=type==="admin"?"Masuk sebagai Admin":"Masuk / daftar sebagai Pembeli";
+  if(type==="admin"){
+    $("registerTab").classList.add("hidden");
+    $("registerForm").classList.remove("active");
+    $("adminRegisterNote").classList.remove("hidden");
+  }else{
+    $("registerTab").classList.remove("hidden");
+    $("adminRegisterNote").classList.add("hidden");
+  }
+  switchAuth("login");
+}
+function backToPortalPicker(){
+  authPortal=null;
+  $("authForms").classList.add("hidden");
+  $("portalPicker").classList.remove("hidden");
+  $("portalBadge").textContent="Pilih jenis akun untuk masuk";
+  ["loginForm","registerForm"].forEach(id=>{const f=$(id); if(f&&f.reset)f.reset()});
+}
+
+function switchAuth(type){
+  $("loginTab").classList.toggle("active",type==="login");
+  $("registerTab").classList.toggle("active",type==="register");
+  $("loginForm").classList.toggle("active",type==="login");
+  $("registerForm").classList.toggle("active",type==="register");
+  $("forgotForm").classList.remove("active");
+}
 function showLogin(){switchAuth("login")}
 function showForgotPassword(){
   ["loginTab","registerTab"].forEach(i=>$(i).classList.remove("active"));
@@ -179,225 +251,161 @@ async function resetPassword(){
   }catch(err){toast(err.message)}finally{busy(btn,false)}
 }
 
-let realtimeStarted=false;
-function setUser(u){
-  sessionUser=u||null;
-  document.getElementById("authScreen").classList.toggle("hidden",!!sessionUser);
+// Ambil baris profil (nama, peran, dsb) milik akun yang sedang login.
+// Kebijakan RLS "customers select" selalu mengizinkan seseorang membaca
+// baris miliknya sendiri (user_id = auth.uid()), apa pun perannya.
+async function fetchMyProfile(userId){
+  const {data,error}=await supabaseClient.from("customers")
+    .select("id,name,phone,email,joined,note,role,user_id")
+    .eq("user_id",userId).maybeSingle();
+  if(error){console.error(error);return null}
+  return data;
+}
+
+function applySession(user,profile){
+  sessionUser={id:user.id,email:user.email,name:profile?.name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Member"};
+  sessionRole=profile?.role==="admin"?"admin":"pembeli";
+  $("authScreen").classList.add("hidden");
   updateUserUI();
-  if(sessionUser){
+  if(sessionRole==="admin"){
+    $("adminApp").classList.remove("hidden");
+    $("buyerApp").classList.add("hidden");
     loadCustomers();
     startRealtimeOnce();
   }else{
-    data=[];render();
-    supabaseClient.removeAllChannels();
-    realtimeStarted=false;
+    $("adminApp").classList.add("hidden");
+    $("buyerApp").classList.remove("hidden");
+    loadMyProfile();
+    startBuyerRealtimeOnce();
   }
 }
+
+function clearSession(){
+  sessionUser=null; sessionRole=null;
+  $("adminApp").classList.add("hidden");
+  $("buyerApp").classList.add("hidden");
+  $("authScreen").classList.remove("hidden");
+  backToPortalPicker();
+  try{supabaseClient.removeAllChannels()}catch{}
+  realtimeStarted=false; buyerRealtimeStarted=false;
+  data=[];
+}
+
 async function showAuth(){
-
   let session = null;
-  try {
-    ({ data: { session } } = await supabaseClient.auth.getSession());
-  } catch (err) { console.error(err); }
-
-  if (!session) {
-    setUser(null);
-    return;
-  }
-
-  const user = session.user;
-
-  const name =
-    user.user_metadata?.full_name ||
-    user.email?.split("@")[0] ||
-    "Member";
-
-  setUser({
-    id: user.id,
-    name: name,
-    email: user.email
-  });
+  try { ({ data: { session } } = await supabaseClient.auth.getSession()); } catch (err) { console.error(err); }
+  if (!session) { clearSession(); return; }
+  const profile = await fetchMyProfile(session.user.id);
+  applySession(session.user, profile);
 }
 
 function updateUserUI(){
-  const u=sessionUser;if(!u)return;
-  document.getElementById("userName").textContent=u.name;
-  document.getElementById("userAvatar").textContent=initials(u.name);
+  const u=sessionUser; if(!u)return;
+  const label=sessionRole==="admin"?"Admin":"Pembeli";
+  if($("userName")){$("userName").textContent=u.name;$("userAvatar").textContent=initials(u.name);if($("userRoleLabel"))$("userRoleLabel").textContent=label}
+  if($("buyerName")){$("buyerName").textContent=u.name;$("buyerAvatar").textContent=initials(u.name)}
 }
+
 async function login(e){
   e.preventDefault();
   if (!SUPABASE_URL_OK) { toast("Konfigurasi Supabase salah: cek SUPABASE_URL di script.js"); return; }
-
   const btn = e.target.querySelector(".auth-submit");
-  busy(btn, true);
-
+  busy(btn, true); authFlowBusy=true;
   try {
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
-
-    const { data, error } =
-      await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-      });
-
+    const email = $("loginEmail").value.trim();
+    const password = $("loginPassword").value;
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
-    const user = data.user;
+    const profile = await fetchMyProfile(data.user.id);
+    if(!profile){
+      await supabaseClient.auth.signOut();
+      throw new Error("Profil pelanggan untuk akun ini tidak ditemukan. Hubungi admin.");
+    }
+    if(authPortal && profile.role!==authPortal){
+      await supabaseClient.auth.signOut();
+      const real=profile.role==="admin"?"Admin":"Pembeli";
+      throw new Error("Akun ini terdaftar sebagai "+real+". Silakan kembali dan pilih portal "+real+".");
+    }
 
-    const name =
-      user.user_metadata?.full_name ||
-      user.email?.split("@")[0] ||
-      "Member";
-
-    setUser({
-      id: user.id,
-      name: name,
-      email: user.email
-    });
-
-    document.getElementById("loginForm").reset();
-
-    toast("Login berhasil. Selamat datang, " + name);
-
+    applySession(data.user, profile);
+    $("loginForm").reset();
+    toast("Login berhasil. Selamat datang, " + (profile.name||data.user.email));
   } catch (err) {
     toast(err.message);
   } finally {
-    busy(btn, false);
+    busy(btn, false); authFlowBusy=false;
   }
 }
 
 async function register(e){
   e.preventDefault();
   if (!SUPABASE_URL_OK) { toast("Konfigurasi Supabase salah: cek SUPABASE_URL di script.js"); return; }
+  if (authPortal!=="pembeli") { toast("Pendaftaran akun baru hanya tersedia untuk portal Pembeli."); return; }
 
   const btn = e.target.querySelector(".auth-submit");
-  const name = document.getElementById("regName").value.trim();
-  const phone = document.getElementById("regPhone").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const password = document.getElementById("regPassword").value;
-  const confirm = document.getElementById("regConfirm").value;
+  const name = $("regName").value.trim();
+  const phone = $("regPhone").value.trim();
+  const email = $("regEmail").value.trim();
+  const password = $("regPassword").value;
+  const confirm = $("regConfirm").value;
 
-  if (password !== confirm) {
-    toast("Konfirmasi password tidak cocok");
-    return;
-  }
+  if (password !== confirm) { toast("Konfirmasi password tidak cocok"); return; }
+  if (password.length < 8) { toast("Password minimal 8 karakter"); return; }
 
-  if (password.length < 8) {
-    toast("Password minimal 8 karakter");
-    return;
-  }
-
-  busy(btn, true);
-
+  busy(btn, true); authFlowBusy=true;
   try {
-
-    const { data, error } =
-      await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            phone: phone
-          }
-        }
-      });
-
+    const { data, error } = await supabaseClient.auth.signUp({
+      email, password, options: { data: { full_name: name, phone } }
+    });
     if (error) throw error;
+    $("registerForm").reset();
 
-    document.getElementById("registerForm").reset();
-
-    /*
-      Jika Confirm Email aktif di Supabase,
-      user harus membuka email konfirmasi terlebih dahulu.
-    */
-
+    // Jika "Confirm Email" aktif di Supabase, user harus membuka email
+    // konfirmasi dulu sebelum punya sesi.
     if (data.session) {
-
-      setUser({
-        id: data.user.id,
-        name: name,
-        email: data.user.email
-      });
-
+      const profile = await fetchMyProfile(data.user.id);
+      applySession(data.user, profile);
       toast("Akun berhasil dibuat. Selamat datang, " + name);
-
     } else {
-
       switchAuth("login");
-
-      toast(
-        "Akun berhasil dibuat. Silakan cek email untuk verifikasi."
-      );
-
+      toast("Akun berhasil dibuat. Silakan cek email untuk verifikasi.");
     }
-
   } catch (err) {
-
     toast(err.message);
-
   } finally {
-
-    busy(btn, false);
-
+    busy(btn, false); authFlowBusy=false;
   }
 }
 
 async function logout(){
-
-  const { error } =
-    await supabaseClient.auth.signOut();
-
-  if (error) {
-    toast(error.message);
-    return;
-  }
-
-  setUser(null);
-  switchAuth("login");
-
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) { toast(error.message); return; }
+  clearSession();
   toast("Anda telah keluar dari akun");
 }
 
 showAuth();
 
-supabaseClient.auth.onAuthStateChange(
-  (event, session) => {
-
-    if (event === "PASSWORD_RECOVERY") {
-      recovering = true;
-      $("authScreen").classList.remove("hidden");
-      showForgotPassword();
-      showForgotStep(3);
-      return;
-    }
-
-    if (recovering) return;
-
-    if (session) {
-
-      const user = session.user;
-
-      const name =
-        user.user_metadata?.full_name ||
-        user.email?.split("@")[0] ||
-        "Member";
-
-      setUser({
-        id: user.id,
-        name: name,
-        email: user.email
-      });
-
-    } else {
-
-      setUser(null);
-
-    }
-
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") {
+    recovering = true;
+    $("authScreen").classList.remove("hidden");
+    $("portalPicker").classList.add("hidden");
+    $("authForms").classList.remove("hidden");
+    showForgotPassword();
+    showForgotStep(3);
+    return;
   }
-);
+  if (recovering) return;
+  if (authFlowBusy) return; // login()/register() sudah menangani sesi ini sendiri
+
+  if (session) {
+    fetchMyProfile(session.user.id).then(profile=>applySession(session.user, profile));
+  } else {
+    clearSession();
+  }
+});
 
 render();
 
@@ -459,7 +467,8 @@ function flashStats(){
 }
 
 /* Berlangganan perubahan tabel customers & transactions lewat Supabase Realtime.
-   Dipanggil sekali setiap sesi login (lihat setUser). */
+   Dipanggil sekali setiap sesi login sebagai admin (lihat applySession). */
+let realtimeStarted=false;
 function startRealtimeOnce(){
   if(realtimeStarted)return; realtimeStarted=true;
   supabaseClient.channel("customers-rt")
