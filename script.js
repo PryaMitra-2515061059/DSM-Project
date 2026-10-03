@@ -205,6 +205,37 @@ let sessionUser=null, sessionRole=null, authPortal=null, recovering=false, authF
 function busy(btn,on){if(btn){btn.disabled=on;btn.style.opacity=on?".6":"1"}}
 function currentUser(){return sessionUser}
 
+// Terjemahkan pesan error teknis dari Supabase Auth (berbahasa Inggris)
+// menjadi pesan yang jelas bagi pengguna. Untuk kombinasi email+password
+// yang salah, pesannya SENGAJA digabung -- tidak membedakan "email belum
+// terdaftar" dari "password salah" -- karena membedakan keduanya membuka
+// celah keamanan: orang luar bisa mencoba-coba banyak alamat email untuk
+// mengetahui mana saja yang sudah terdaftar di sistem (dikenal sebagai
+// "email enumeration"). Ini praktik standar yang juga dipakai Supabase,
+// Google, dan layanan serupa lainnya.
+function friendlyAuthError(err){
+  const m=(err&&err.message)||"";
+  if(/invalid login credentials/i.test(m)){
+    return "Email atau password salah. Periksa kembali, atau daftar dulu lewat tab Register jika belum punya akun.";
+  }
+  if(/email not confirmed/i.test(m)){
+    return "Email Anda belum diverifikasi. Cek inbox (atau folder spam) untuk tautan konfirmasi dari Supabase.";
+  }
+  if(/user already registered|already been registered/i.test(m)){
+    return "Email ini sudah terdaftar. Silakan login, atau gunakan menu Lupa Password jika lupa kata sandi.";
+  }
+  if(/rate limit|too many requests/i.test(m)){
+    return "Terlalu banyak percobaan. Coba lagi dalam beberapa menit.";
+  }
+  if(/password should be at least/i.test(m)){
+    return "Password terlalu pendek. Gunakan minimal 8 karakter.";
+  }
+  if(/network|fetch/i.test(m)){
+    return "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.";
+  }
+  return m || "Terjadi kesalahan. Silakan coba lagi.";
+}
+
 function choosePortal(type){
   authPortal=type;
   $("portalPicker").classList.add("hidden");
@@ -257,7 +288,7 @@ async function requestReset(){
     if(error)throw error;
     toast("Jika email terdaftar, tautan reset telah dikirim. Cek inbox Anda.");
     showLogin();
-  }catch(err){toast(err.message)}finally{busy(btn,false)}
+  }catch(err){toast(friendlyAuthError(err))}finally{busy(btn,false)}
 }
 // Langkah 3: simpan password baru setelah pengguna membuka tautan di email
 async function resetPassword(){
@@ -273,8 +304,21 @@ async function resetPassword(){
     recovering=false;
     toast("Password berhasil diubah.");
     showAuth();
-  }catch(err){toast(err.message)}finally{busy(btn,false)}
+  }catch(err){toast(friendlyAuthError(err))}finally{busy(btn,false)}
 }
+
+// Cek apakah password & konfirmasinya sudah sama, diperbarui setiap kali
+// pengguna mengetik (bukan cuma dicek saat tombol submit ditekan), supaya
+// kesalahan ketik langsung terlihat sebelum form dikirim.
+function comparePasswords(pwId,confirmId,hintId){
+  const pw=$(pwId).value, cf=$(confirmId).value;
+  const hint=$(hintId); if(!hint)return;
+  if(!cf){hint.textContent="";hint.className="field-hint";return}
+  if(pw===cf){hint.textContent="✓ Password cocok";hint.className="field-hint match"}
+  else{hint.textContent="✗ Password belum sama";hint.className="field-hint mismatch"}
+}
+function checkRegPasswordMatch(){comparePasswords("regPassword","regConfirm","regConfirmHint")}
+function checkResetPasswordMatch(){comparePasswords("newPassword","newPasswordConfirm","resetConfirmHint")}
 
 // Ambil baris profil (nama, peran, dsb) milik akun yang sedang login.
 // Kebijakan RLS "customers select" selalu mengizinkan seseorang membaca
@@ -357,7 +401,7 @@ async function login(e){
     $("loginForm").reset();
     toast("Login berhasil. Selamat datang, " + (profile.name||data.user.email));
   } catch (err) {
-    toast(err.message);
+    toast(friendlyAuthError(err));
   } finally {
     busy(btn, false); authFlowBusy=false;
   }
@@ -397,7 +441,7 @@ async function register(e){
       toast("Akun berhasil dibuat. Silakan cek email untuk verifikasi.");
     }
   } catch (err) {
-    toast(err.message);
+    toast(friendlyAuthError(err));
   } finally {
     busy(btn, false); authFlowBusy=false;
   }

@@ -177,8 +177,8 @@
         </div>
 
         <div id="resetStep3" class="reset-step">
-          <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="8" maxlength="128" placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
-          <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="8" maxlength="128" placeholder="Ulangi password baru" autocomplete="new-password"></div>
+          <div class="auth-field"><label>Password Baru</label><input id="newPassword" type="password" minlength="8" maxlength="128" placeholder="Minimal 8 karakter" autocomplete="new-password" oninput="checkResetPasswordMatch()"></div>
+          <div class="auth-field"><label>Konfirmasi Password Baru</label><input id="newPasswordConfirm" type="password" minlength="8" maxlength="128" placeholder="Ulangi password baru" autocomplete="new-password" oninput="checkResetPasswordMatch()"><small class="field-hint" id="resetConfirmHint"></small></div>
           <button type="button" class="auth-submit" onclick="resetPassword()">Simpan Password Baru</button>
           <div class="auth-note">Gunakan minimal 8 karakter. </div>
         </div>
@@ -188,8 +188,8 @@
         <div class="auth-field"><label>Nama Lengkap</label><input id="regName" required placeholder="Nama lengkap"></div>
         <div class="auth-field"><label>No. WhatsApp</label><input id="regPhone" required inputmode="tel" placeholder="08xxxxxxxxxx"></div>
         <div class="auth-field"><label>Email</label><input id="regEmail" type="email" required placeholder="nama@email.com"></div>
-        <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="8" maxlength="128" required placeholder="Minimal 8 karakter" autocomplete="new-password"></div>
-        <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="8" maxlength="128" required placeholder="Ulangi password" autocomplete="new-password"></div>
+        <div class="auth-field"><label>Password</label><input id="regPassword" type="password" minlength="8" maxlength="128" required placeholder="Minimal 8 karakter" autocomplete="new-password" oninput="checkRegPasswordMatch()"></div>
+        <div class="auth-field"><label>Konfirmasi Password</label><input id="regConfirm" type="password" minlength="8" maxlength="128" required placeholder="Ulangi password" autocomplete="new-password" oninput="checkRegPasswordMatch()"><small class="field-hint" id="regConfirmHint"></small></div>
         <button class="auth-submit">Buat Akun Pembeli</button>
         <div class="auth-note">Akun dikelola oleh Supabase Auth. Password disimpan dalam bentuk hash, bukan teks asli.</div>
       </form>
