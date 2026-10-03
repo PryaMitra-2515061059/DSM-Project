@@ -72,11 +72,16 @@ tr.row-flash td{animation:actIn 1.4s ease}
 .hidden{display:none !important}
 
 #portalPicker{display:flex;flex-direction:column;gap:10px}
-.portal-choice{display:flex;align-items:center;gap:13px;border:1px solid var(--line);border-radius:12px;padding:15px;cursor:pointer;transition:.15s;text-align:left}
+.portal-choice{display:flex;align-items:center;gap:13px;width:100%;border:1px solid var(--line);border-radius:12px;padding:15px;cursor:pointer;transition:.15s;text-align:left;background:#fff;font:inherit;color:inherit;-webkit-appearance:none;appearance:none}
 .portal-choice:hover{border-color:var(--primary);background:#faf6f2}
+.portal-choice:active{transform:scale(.99)}
+.portal-choice:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .portal-ico{font-size:22px;width:36px;text-align:center;flex:none}
+.portal-text{flex:1;min-width:0}
 .portal-choice b{display:block;font-size:13px}
-.portal-choice small{display:block;color:#7b8390;font-size:11px;margin-top:3px;line-height:1.4}
+.portal-choice small{display:block;color:#7b8390;font-size:11px;margin-top:3px;line-height:1.4;white-space:normal}
+.portal-arrow{flex:none;color:#b9a99e;font-size:15px;transition:.15s}
+.portal-choice:hover .portal-arrow{color:var(--primary);transform:translateX(2px)}
 #authForms .back-auth{margin-bottom:15px}
 
 .buyer-app{min-height:100vh;background:var(--bg)}

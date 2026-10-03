@@ -141,14 +141,16 @@
          supabase.sql) -- pilihan di sini hanya menentukan portal yang
          dituju, dan akan dicocokkan ulang setelah login berhasil. -->
     <div id="portalPicker">
-      <div class="portal-choice" onclick="choosePortal('pembeli')">
-        <div class="portal-ico">🛍️</div>
-        <div><b>Pembeli</b><small>Mau beli &amp; lihat profil/riwayat pembelian saya</small></div>
-      </div>
-      <div class="portal-choice" onclick="choosePortal('admin')">
-        <div class="portal-ico">🛠️</div>
-        <div><b>Admin</b><small>Kelola seluruh data pelanggan Kopi Batin</small></div>
-      </div>
+      <button type="button" class="portal-choice" onclick="choosePortal('pembeli')">
+        <span class="portal-ico">🛍️</span>
+        <span class="portal-text"><b>Pembeli</b><small>Mau beli &amp; lihat profil/riwayat pembelian saya</small></span>
+        <span class="portal-arrow">→</span>
+      </button>
+      <button type="button" class="portal-choice" onclick="choosePortal('admin')">
+        <span class="portal-ico">🛠️</span>
+        <span class="portal-text"><b>Admin</b><small>Kelola seluruh data pelanggan Kopi Batin</small></span>
+        <span class="portal-arrow">→</span>
+      </button>
     </div>
 
     <div id="authForms" class="hidden">
