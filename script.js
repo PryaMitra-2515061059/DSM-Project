@@ -7,6 +7,9 @@ if (!SUPABASE_URL_OK) console.error("SUPABASE_URL tidak valid: project ref harus
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// Singkatan document.getElementById, dipakai di hampir seluruh file.
+const $=id=>document.getElementById(id);
+
 /* ================= DATA PELANGGAN (Supabase: tabel customers & transactions) =================
    Baris pelanggan TIDAK lagi memakai data contoh (seed) atau localStorage.
    Setiap akun baru yang register otomatis dibuatkan satu baris pelanggan oleh
