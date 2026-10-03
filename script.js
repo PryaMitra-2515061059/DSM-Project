@@ -165,6 +165,28 @@ function startBuyerRealtimeOnce(){
     .subscribe();
 }
 
+// Tukar Kode Admin menjadi peran admin untuk akun yang sedang login.
+// Validasi kodenya (berlaku/habis pakai/kedaluwarsa) dilakukan sepenuhnya
+// di database lewat fungsi redeem_admin_invite() (lihat supabase.sql) --
+// kode itu sendiri tidak pernah dikirim atau dicek di browser, supaya
+// tidak bisa dibaca lewat DevTools atau ditebak dari script.js ini.
+async function redeemAdminCode(){
+  const input=$("adminCodeInput");
+  const code=input.value.trim();
+  if(!code){toast("Masukkan kode admin terlebih dahulu");return}
+  const btn=document.querySelector("#adminUpgradePanel .btn.primary");
+  busy(btn,true);
+  try{
+    const {error}=await supabaseClient.rpc("redeem_admin_invite",{p_code:code});
+    if(error)throw error;
+    input.value="";
+    toast("Berhasil! Akun Anda sekarang Admin.");
+    const {data:{user}}=await supabaseClient.auth.getUser();
+    const profile=await fetchMyProfile(user.id);
+    applySession(user,profile);
+  }catch(err){toast("Gagal: "+err.message)}finally{busy(btn,false)}
+}
+
 /* ================= AUTENTIKASI & PERAN (Admin vs Pembeli) =================
    Setiap akun punya SATU peran tersimpan di kolom customers.role ('admin'
    atau 'pembeli'), ditentukan oleh database -- bukan oleh tombol yang

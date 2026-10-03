@@ -84,6 +84,17 @@
       <div class="panel-head"><h3>Riwayat Pembelian</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
       <div id="buyerHistory"></div>
     </section>
+
+    <!-- Hanya relevan untuk calon staf yang diundang jadi admin oleh admin
+         yang sudah ada. Pembeli biasa boleh mengabaikan panel ini. -->
+    <section class="panel" id="adminUpgradePanel">
+      <div class="panel-head"><h3>Masuk sebagai Admin</h3></div>
+      <div class="admin-upgrade-body">
+        <div class="field"><label>Kode Admin</label><input id="adminCodeInput" placeholder="Tempel kode undangan dari pengelola sistem"></div>
+        <button class="btn primary" onclick="redeemAdminCode()">Tukar Kode</button>
+      </div>
+      <div class="auth-note admin-upgrade-note">Hanya perlu sekali. Kode didapat secara rahasia dari admin Kopi Batin yang sudah ada.</div>
+    </section>
   </main>
 </div>
 
@@ -181,7 +192,7 @@
         <div class="auth-note">Akun dikelola oleh Supabase Auth. Password disimpan dalam bentuk hash, bukan teks asli.</div>
       </form>
 
-      <div class="auth-note hidden" id="adminRegisterNote">Akun Admin tidak bisa dibuat sendiri lewat form ini. Hubungi pengelola sistem Kopi Batin untuk dibuatkan akun.</div>
+      <div class="auth-note hidden" id="adminRegisterNote">Akun Admin tidak dibuat lewat form ini. Daftar dulu lewat portal Pembeli, lalu tukar Kode Admin dari pengelola sistem di menu "Masuk sebagai Admin" pada Dashboard Saya.</div>
     </div>
   </div>
 </div>
