@@ -32,6 +32,7 @@ async function loadCustomers(){
   if(error){toast("Gagal memuat data pelanggan: "+error.message);return}
   data=(rows||[]).map(c=>({...c,transactions:c.transactions||[]}));
   render();
+  if(currentAdminView==="laporan")renderLaporan();
 }
 
 function render(){
@@ -117,6 +118,103 @@ async function removeCustomer(id){
   toast("Data pelanggan dihapus");
   await loadCustomers();
  }catch(err){toast("Gagal menghapus: "+err.message)}
+}
+
+/* ================= LAPORAN (admin) =================
+   Dihitung di browser dari "data" yang sudah dimuat loadCustomers() --
+   tidak ada query baru ke Supabase, jadi langsung ikut live tiap kali
+   data berubah (lihat pemanggilan renderLaporan() di loadCustomers()). */
+let currentAdminView="pelanggan";
+
+function showAdminView(e,view){
+  if(e)e.preventDefault();
+  currentAdminView=view;
+  $("navPelanggan").classList.toggle("active",view==="pelanggan");
+  $("navLaporan").classList.toggle("active",view==="laporan");
+  $("viewPelanggan").classList.toggle("hidden",view!=="pelanggan");
+  $("viewLaporan").classList.toggle("hidden",view!=="laporan");
+  $("pelangganTopActions").classList.toggle("hidden",view!=="pelanggan");
+  $("crumbLabel").textContent=view==="laporan"?"Laporan":"Data Pelanggan";
+  $("pageTitle").textContent=view==="laporan"?"Laporan":"Data Pelanggan";
+  $("pageDesc").textContent=view==="laporan"
+    ?"Ringkasan pendapatan, produk terlaris, dan pelanggan terbesar Kopi Batin."
+    :"Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.";
+  if(view==="laporan")renderLaporan();
+}
+
+function aggregateReport(){
+  const allTrx=data.flatMap(c=>c.transactions.map(t=>({...t,customerName:c.name})));
+  const totalRevenue=allTrx.reduce((a,t)=>a+Number(t.amount),0);
+  const totalTrx=allTrx.length;
+  const avgTrx=totalTrx?totalRevenue/totalTrx:0;
+
+  const byProduct={};
+  allTrx.forEach(t=>{
+    const k=t.product||"(tanpa nama)";
+    byProduct[k]=byProduct[k]||{qty:0,revenue:0};
+    byProduct[k].qty+=Number(t.qty);
+    byProduct[k].revenue+=Number(t.amount);
+  });
+  const topProducts=Object.entries(byProduct)
+    .map(([name,v])=>({name,...v}))
+    .sort((a,b)=>b.revenue-a.revenue).slice(0,5);
+
+  const topCustomers=data
+    .map(c=>{const t=totals(c);return {name:c.name,spend:t.spend,visits:t.visits}})
+    .sort((a,b)=>b.spend-a.spend).slice(0,5);
+
+  return {totalRevenue,totalTrx,avgTrx,topProducts,topCustomers};
+}
+
+function barRow(label,sub,value,max,valueText){
+  const pct=max>0?Math.max(2,Math.round(value/max*100)):0;
+  return `<div class="bar-row">
+    <div class="bar-label">${esc(label)}<small>${esc(sub)}</small></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+    <div class="bar-value">${valueText}</div>
+  </div>`;
+}
+
+function renderLaporan(){
+  const r=aggregateReport();
+  $("lapRevenue").textContent=rupiah(r.totalRevenue);
+  $("lapTrx").textContent=r.totalTrx;
+  $("lapAvg").textContent=rupiah(Math.round(r.avgTrx));
+  $("lapCustomers").textContent=data.length;
+
+  const maxProductRevenue=Math.max(0,...r.topProducts.map(p=>p.revenue));
+  $("lapTopProducts").innerHTML=r.topProducts.length
+    ?r.topProducts.map(p=>barRow(p.name,p.qty+" terjual",p.revenue,maxProductRevenue,rupiah(p.revenue))).join("")
+    :'<div class="empty">Belum ada transaksi.</div>';
+
+  const maxCustomerSpend=Math.max(0,...r.topCustomers.map(c=>c.spend));
+  $("lapTopCustomers").innerHTML=r.topCustomers.length
+    ?r.topCustomers.map(c=>barRow(c.name,c.visits+" kunjungan",c.spend,maxCustomerSpend,rupiah(c.spend))).join("")
+    :'<div class="empty">Belum ada pelanggan.</div>';
+}
+
+function exportLaporanCSV(){
+  const r=aggregateReport();
+  const rows=[
+    ["Ringkasan"],
+    ["Total Pendapatan",r.totalRevenue],
+    ["Total Transaksi",r.totalTrx],
+    ["Rata-rata per Transaksi",Math.round(r.avgTrx)],
+    ["Total Pelanggan",data.length],
+    [],
+    ["Produk Terlaris","Jumlah Terjual","Pendapatan"],
+    ...r.topProducts.map(p=>[p.name,p.qty,p.revenue]),
+    [],
+    ["Pelanggan Terbesar","Kunjungan","Total Belanja"],
+    ...r.topCustomers.map(c=>[c.name,c.visits,c.spend]),
+  ];
+  const csv=rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="laporan-kopi-batin.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Laporan CSV berhasil diekspor");
 }
 
 function closeModal(id){$(id).classList.remove("show")}

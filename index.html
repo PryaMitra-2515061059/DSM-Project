@@ -13,9 +13,9 @@
   <div class="brand"><div class="logo">KB</div><div><b>Kopi Batin</b><small>Customer Information</small></div></div>
   <div class="nav-title">Menu Utama</div>
   <nav class="nav">
-    <a href="#" class="active"><span class="ico">◉</span><span>Data Pelanggan</span></a>
+    <a href="#" id="navPelanggan" class="active" onclick="showAdminView(event,'pelanggan')"><span class="ico">◉</span><span>Data Pelanggan</span></a>
     <a href="#" onclick="showComing(event,'Riwayat Transaksi')"><span class="ico">▤</span><span>Riwayat Transaksi</span></a>
-    <a href="#" onclick="showComing(event,'Laporan')"><span class="ico">▥</span><span>Laporan</span></a>
+    <a href="#" id="navLaporan" onclick="showAdminView(event,'laporan')"><span class="ico">▥</span><span>Laporan</span></a>
   </nav>
   <div class="nav-title">Sistem</div>
   <nav class="nav"><a href="#" onclick="showComing(event,'Pengaturan')"><span class="ico">⚙</span><span>Pengaturan</span></a></nav>
@@ -23,36 +23,57 @@
 </aside>
 
 <main class="main">
-  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong>Data Pelanggan</strong></div><div class="top-actions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small id="userRoleLabel">Admin</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
-  <div class="page-head"><div><h1>Data Pelanggan</h1><p>Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div>
+  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong id="crumbLabel">Data Pelanggan</strong></div><div class="top-actions"><span id="pelangganTopActions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button></span><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small id="userRoleLabel">Admin</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
+  <div class="page-head"><div><h1 id="pageTitle">Data Pelanggan</h1><p id="pageDesc">Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div>
     <div class="live-box" title="Data tersinkron otomatis antar tab/jendela"><span class="live-dot"></span><div><b>Live</b><small id="liveClock">--:--:--</small></div></div>
   </div>
 
-  <section class="stats">
-    <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="statCustomers">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Kunjungan</span><div class="badge-icon">↻</div></div><div class="num" id="statVisits">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Pembelian</span><div class="badge-icon">☕</div></div><div class="num" id="statItems">0</div></div>
-    <div class="stat"><div class="stat-top"><span>Total Nilai Pembelian</span><div class="badge-icon">Rp</div></div><div class="num" id="statRevenue">Rp0</div></div>
-  </section>
+  <div id="viewPelanggan">
+    <section class="stats">
+      <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="statCustomers">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Kunjungan</span><div class="badge-icon">↻</div></div><div class="num" id="statVisits">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Pembelian</span><div class="badge-icon">☕</div></div><div class="num" id="statItems">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Nilai Pembelian</span><div class="badge-icon">Rp</div></div><div class="num" id="statRevenue">Rp0</div></div>
+    </section>
 
-  <section class="panel">
-    <div class="toolbar">
-      <div class="search"><span>⌕</span><input id="search" placeholder="Cari nama atau nomor WhatsApp..." oninput="render()"></div>
-      <select id="sort" onchange="render()"><option value="latest">Terbaru</option><option value="name">Nama A–Z</option><option value="visits">Kunjungan terbanyak</option><option value="spend">Pembelian terbesar</option></select>
-      <button class="btn" onclick="resetFilter()">Reset</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Pelanggan</th><th>Kunjungan</th><th>Jumlah Pembelian</th><th>Total Pembelian</th><th>Terakhir Berkunjung</th><th>Status Akun</th><th>Aksi</th></tr></thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </section>
+    <section class="panel">
+      <div class="toolbar">
+        <div class="search"><span>⌕</span><input id="search" placeholder="Cari nama atau nomor WhatsApp..." oninput="render()"></div>
+        <select id="sort" onchange="render()"><option value="latest">Terbaru</option><option value="name">Nama A–Z</option><option value="visits">Kunjungan terbanyak</option><option value="spend">Pembelian terbesar</option></select>
+        <button class="btn" onclick="resetFilter()">Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Pelanggan</th><th>Kunjungan</th><th>Jumlah Pembelian</th><th>Total Pembelian</th><th>Terakhir Berkunjung</th><th>Status Akun</th><th>Aksi</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
 
-  <section class="panel activity">
-    <div class="panel-head"><h3>Aktivitas Real-time</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
-    <div id="activityList"></div>
-  </section>
+    <section class="panel activity">
+      <div class="panel-head"><h3>Aktivitas Real-time</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
+      <div id="activityList"></div>
+    </section>
+  </div>
+
+  <div id="viewLaporan" class="hidden">
+    <section class="stats">
+      <div class="stat"><div class="stat-top"><span>Total Pendapatan</span><div class="badge-icon">Rp</div></div><div class="num" id="lapRevenue">Rp0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Transaksi</span><div class="badge-icon">☕</div></div><div class="num" id="lapTrx">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Rata-rata / Transaksi</span><div class="badge-icon">↻</div></div><div class="num" id="lapAvg">Rp0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="lapCustomers">0</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Produk Terlaris</h3><button class="btn" onclick="exportLaporanCSV()">↓ Export Laporan CSV</button></div>
+      <div id="lapTopProducts" class="bar-list"></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Pelanggan dengan Belanja Terbesar</h3></div>
+      <div id="lapTopCustomers" class="bar-list"></div>
+    </section>
+  </div>
 </main>
 </div>
 
@@ -85,6 +106,8 @@
       <div id="buyerHistory"></div>
     </section>
 
+    <!-- Hanya relevan untuk calon staf yang diundang jadi admin oleh admin
+         yang sudah ada. Pembeli biasa boleh mengabaikan panel ini. -->
     <section class="panel" id="adminUpgradePanel">
       <div class="panel-head"><h3>Masuk sebagai Admin</h3></div>
       <div class="admin-upgrade-body">
