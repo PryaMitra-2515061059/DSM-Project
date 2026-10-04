@@ -133,13 +133,12 @@ function exportCSV(){
    pengguna cuma melihat profil dan riwayat pembeliannya SENDIRI -- baik di
    tampilan maupun di database (lihat kebijakan RLS "pembeli hanya baris
    sendiri" pada supabase.sql, bukan cuma disembunyikan di layar). */
-let buyerRealtimeStarted=false, myCustomerId=null;
+let buyerRealtimeStarted=false;
 
 async function loadMyProfile(){
   if(!sessionUser)return;
   const profile=await fetchMyProfile(sessionUser.id);
   if(!profile){toast("Profil Anda tidak ditemukan. Hubungi admin.");return}
-  myCustomerId=profile.id;
   const {data:trx,error}=await supabaseClient.from("transactions")
     .select("id,date,product,qty,amount")
     .eq("customer_id",profile.id)
