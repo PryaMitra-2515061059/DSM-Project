@@ -57,21 +57,59 @@
   </div>
 
   <div id="viewLaporan" class="hidden">
-    <section class="stats">
+    <section class="panel report-filter">
+      <div class="toolbar">
+        <label class="filter-label" for="lapPeriod">Periode</label>
+        <select id="lapPeriod" onchange="onLaporanPeriodChange()">
+          <option value="all">Semua waktu</option>
+          <option value="today">Hari ini</option>
+          <option value="7d">7 hari terakhir</option>
+          <option value="30d">30 hari terakhir</option>
+          <option value="month">Bulan ini</option>
+          <option value="custom">Pilih tanggal…</option>
+        </select>
+        <span id="lapCustomRange" class="custom-range hidden">
+          <input type="date" id="lapFrom" onchange="renderLaporan()" aria-label="Dari tanggal">
+          <span class="muted">s/d</span>
+          <input type="date" id="lapTo" onchange="renderLaporan()" aria-label="Sampai tanggal">
+        </span>
+        <span class="filter-spacer"></span>
+        <button class="btn" onclick="window.print()">Cetak</button>
+        <button class="btn primary" onclick="exportLaporanCSV()">↓ Export Laporan CSV</button>
+      </div>
+      <div class="report-period-label" id="lapPeriodLabel">Periode: Semua waktu</div>
+    </section>
+
+    <section class="stats" style="margin-top:20px">
       <div class="stat"><div class="stat-top"><span>Total Pendapatan</span><div class="badge-icon">Rp</div></div><div class="num" id="lapRevenue">Rp0</div></div>
       <div class="stat"><div class="stat-top"><span>Total Transaksi</span><div class="badge-icon">☕</div></div><div class="num" id="lapTrx">0</div></div>
       <div class="stat"><div class="stat-top"><span>Rata-rata / Transaksi</span><div class="badge-icon">↻</div></div><div class="num" id="lapAvg">Rp0</div></div>
-      <div class="stat"><div class="stat-top"><span>Total Pelanggan</span><div class="badge-icon">👥</div></div><div class="num" id="lapCustomers">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Pelanggan Aktif</span><div class="badge-icon">👥</div></div><div class="num" id="lapCustomers">0</div><small class="stat-sub" id="lapCustomersSub"></small></div>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h3>Produk Terlaris</h3><button class="btn" onclick="exportLaporanCSV()">↓ Export Laporan CSV</button></div>
+      <div class="panel-head"><h3 id="lapTrendTitle">Tren Pendapatan</h3></div>
+      <div id="lapTrend" class="trend"></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Produk Terlaris</h3></div>
       <div id="lapTopProducts" class="bar-list"></div>
     </section>
 
     <section class="panel" style="margin-top:20px">
       <div class="panel-head"><h3>Pelanggan dengan Belanja Terbesar</h3></div>
       <div id="lapTopCustomers" class="bar-list"></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Rincian Transaksi</h3><span class="muted" id="lapDetailNote"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Produk</th><th>Jumlah</th><th>Total</th></tr></thead>
+          <tbody id="lapTrxBody"></tbody>
+        </table>
+      </div>
     </section>
   </div>
 </main>
