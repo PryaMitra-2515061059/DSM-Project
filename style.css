@@ -132,3 +132,12 @@ table{width:100%;border-collapse:collapse}th{font-size:10px;text-transform:upper
   body{background:#fff}
   .panel,.stat{box-shadow:none;break-inside:avoid}
 }
+
+/* ===== Riwayat Pembelian (admin) ===== */
+.riwayat-panel .toolbar{flex-wrap:wrap}
+.riwayat-panel .search{min-width:240px}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 17px;border-top:1px solid var(--line);font-size:12px}
+.pager .btn{padding:7px 11px;font-size:11px}
+.pager .btn:disabled{opacity:.45;cursor:default}
+.icon-btn:focus-visible,.pager .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media print{#viewRiwayat .toolbar,#viewRiwayat .pager{display:none !important}}

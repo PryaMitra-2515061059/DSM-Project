@@ -14,7 +14,7 @@
   <div class="nav-title">Menu Utama</div>
   <nav class="nav">
     <a href="#" id="navPelanggan" class="active" onclick="showAdminView(event,'pelanggan')"><span class="ico">◉</span><span>Data Pelanggan</span></a>
-    <a href="#" onclick="showComing(event,'Riwayat Transaksi')"><span class="ico">▤</span><span>Riwayat Transaksi</span></a>
+    <a href="#" id="navRiwayat" onclick="showAdminView(event,'riwayat')"><span class="ico">▤</span><span>Riwayat Pembelian</span></a>
     <a href="#" id="navLaporan" onclick="showAdminView(event,'laporan')"><span class="ico">▥</span><span>Laporan</span></a>
   </nav>
   <div class="nav-title">Sistem</div>
@@ -53,6 +53,41 @@
     <section class="panel activity">
       <div class="panel-head"><h3>Aktivitas Real-time</h3><span class="live-pill"><span class="live-dot"></span>Sinkron otomatis</span></div>
       <div id="activityList"></div>
+    </section>
+  </div>
+
+  <div id="viewRiwayat" class="hidden">
+    <section class="stats">
+      <div class="stat"><div class="stat-top"><span>Transaksi</span><div class="badge-icon">▤</div></div><div class="num" id="riCount">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Item</span><div class="badge-icon">☕</div></div><div class="num" id="riItems">0</div></div>
+      <div class="stat"><div class="stat-top"><span>Total Nilai</span><div class="badge-icon">Rp</div></div><div class="num" id="riTotal">Rp0</div></div>
+      <div class="stat"><div class="stat-top"><span>Rata-rata / Transaksi</span><div class="badge-icon">↻</div></div><div class="num" id="riAvg">Rp0</div></div>
+    </section>
+
+    <section class="panel riwayat-panel">
+      <div class="toolbar">
+        <div class="search"><span>⌕</span><input id="riSearch" placeholder="Cari pelanggan, nomor WhatsApp, atau produk..." oninput="riChanged()"></div>
+        <select id="riPeriod" onchange="onRiPeriodChange()" aria-label="Periode">
+          <option value="all">Semua waktu</option><option value="today">Hari ini</option><option value="7d">7 hari terakhir</option>
+          <option value="30d">30 hari terakhir</option><option value="month">Bulan ini</option><option value="custom">Pilih tanggal…</option>
+        </select>
+        <span id="riCustomRange" class="custom-range hidden">
+          <input type="date" id="riFrom" onchange="riChanged()" aria-label="Dari tanggal"><span class="muted">s/d</span><input type="date" id="riTo" onchange="riChanged()" aria-label="Sampai tanggal">
+        </span>
+        <select id="riProduct" onchange="riChanged()" aria-label="Produk"><option value="">Semua produk</option></select>
+        <select id="riSort" onchange="riChanged()" aria-label="Urutan">
+          <option value="latest">Terbaru</option><option value="oldest">Terlama</option><option value="high">Nilai terbesar</option><option value="low">Nilai terkecil</option>
+        </select>
+        <button class="btn" onclick="resetRiwayatFilter()">Reset</button>
+        <button class="btn primary" onclick="exportRiwayatCSV()">↓ Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Pelanggan</th><th>Produk</th><th>Jumlah</th><th>Total</th><th>Aksi</th></tr></thead>
+          <tbody id="riBody"></tbody>
+        </table>
+      </div>
+      <div class="pager"><span class="muted" id="riPagerInfo"></span><div class="actions"><button class="btn" id="riPrev" onclick="riGo(-1)">‹ Sebelumnya</button><button class="btn" id="riNext" onclick="riGo(1)">Berikutnya ›</button></div></div>
     </section>
   </div>
 
