@@ -175,3 +175,6 @@ table{width:100%;border-collapse:collapse}th{font-size:10px;text-transform:upper
 .landing-logout{background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
 .landing-logout:hover{background:rgba(255,255,255,.1)}
 @media(max-width:600px){.landing-user{display:none}}
+
+.set-note{padding:0 20px 16px;color:var(--muted);font-size:11px;line-height:1.5}
+#viewPengaturan .modal-foot{background:#fafbfc}

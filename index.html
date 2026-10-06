@@ -40,7 +40,7 @@
     <a href="#" id="navLaporan" onclick="showAdminView(event,'laporan')"><span class="ico">▥</span><span>Laporan</span></a>
   </nav>
   <div class="nav-title">Sistem</div>
-  <nav class="nav"><a href="#" onclick="showComing(event,'Pengaturan')"><span class="ico">⚙</span><span>Pengaturan</span></a></nav>
+  <nav class="nav"><a href="#" id="navPengaturan" onclick="showAdminView(event,'pengaturan')"><span class="ico">⚙</span><span>Pengaturan</span></a></nav>
   <div class="sidebar-bottom">Modul Data Pelanggan<br><span>Prototype Sistem Informasi</span></div>
 </aside>
 
@@ -167,6 +167,38 @@
           <tbody id="lapTrxBody"></tbody>
         </table>
       </div>
+    </section>
+  </div>
+
+  <div id="viewPengaturan" class="hidden">
+    <section class="panel">
+      <div class="panel-head"><h3>Akun Admin</h3></div>
+      <div class="detail" id="setAccount"></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Ganti Password</h3></div>
+      <form id="setPassForm" onsubmit="changePassword(event)">
+        <div class="form">
+          <div class="field full"><label>Password Saat Ini</label><input id="setOldPass" type="password" required autocomplete="current-password" placeholder="Masukkan password saat ini"></div>
+          <div class="field"><label>Password Baru</label><input id="setNewPass" type="password" required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>
+          <div class="field"><label>Konfirmasi Password Baru</label><input id="setConfPass" type="password" required minlength="8" maxlength="128" autocomplete="new-password" placeholder="Ulangi password baru"></div>
+        </div>
+        <div class="modal-foot"><button type="submit" class="btn primary">Ubah Password</button></div>
+      </form>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Preferensi</h3></div>
+      <form id="setPrefForm" onsubmit="savePengaturan(event)">
+        <div class="form">
+          <div class="field full"><label>Nama Usaha (judul laporan CSV)</label><input id="setNamaUsaha" required maxlength="60" placeholder="Kopi Batin"></div>
+          <div class="field"><label>Baris per Halaman (Riwayat Pembelian)</label><select id="setRiPage"></select></div>
+          <div class="field"><label>Batas Rincian Transaksi (Laporan)</label><select id="setLapLimit"></select></div>
+        </div>
+        <div class="set-note">Preferensi disimpan di browser ini saja, jadi tidak ikut berpindah ke perangkat lain. Ekspor CSV tetap memuat semua data.</div>
+        <div class="modal-foot"><button type="button" class="btn" onclick="resetPengaturan()">Kembalikan Bawaan</button><button type="submit" class="btn primary">Simpan Pengaturan</button></div>
+      </form>
     </section>
   </div>
 </main>
@@ -321,6 +353,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="pelanggan.js"></script>
   <script src="menu-utama.js"></script>
+  <script src="pengaturan.js"></script>
   <script src="laporan.js"></script>
   <script src="riwayat.js"></script>
 </body>

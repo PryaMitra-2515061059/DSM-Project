@@ -135,7 +135,8 @@ let currentAdminView="pelanggan";
 const ADMIN_VIEWS={
   pelanggan:{nav:"navPelanggan",el:"viewPelanggan",title:"Data Pelanggan",desc:"Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin."},
   riwayat:{nav:"navRiwayat",el:"viewRiwayat",title:"Riwayat Pembelian",desc:"Seluruh transaksi pelanggan Kopi Batin. Cari, filter, dan ekspor per periode atau produk."},
-  laporan:{nav:"navLaporan",el:"viewLaporan",title:"Laporan",desc:"Ringkasan pendapatan, produk terlaris, dan pelanggan terbesar Kopi Batin."}
+  laporan:{nav:"navLaporan",el:"viewLaporan",title:"Laporan",desc:"Ringkasan pendapatan, produk terlaris, dan pelanggan terbesar Kopi Batin."},
+  pengaturan:{nav:"navPengaturan",el:"viewPengaturan",title:"Pengaturan",desc:"Atur akun admin, keamanan password, dan preferensi tampilan data."}
 };
 function showAdminView(e,view){
   if(e)e.preventDefault();
@@ -150,6 +151,7 @@ function showAdminView(e,view){
   $("pageDesc").textContent=ADMIN_VIEWS[view].desc;
   if(view==="laporan")renderLaporan();
   if(view==="riwayat")renderRiwayat();
+  if(view==="pengaturan")renderPengaturan();
 }
 
 /* ---- Helper tanggal (semua tanggal transaksi berformat "YYYY-MM-DD") ---- */

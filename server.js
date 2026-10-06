@@ -2,7 +2,7 @@
 /**
  * Kopi Batin — Server statis.
  *
- * Hanya menyajikan index.html, pelanggan.js, menu-utama.js, laporan.js, riwayat.js, dan style.css. Autentikasi
+ * Hanya menyajikan index.html, pelanggan.js, menu-utama.js, pengaturan.js, laporan.js, riwayat.js, dan style.css. Autentikasi
  * (login, register, lupa password, sesi) sepenuhnya ditangani langsung oleh
  * Supabase Auth dari browser (lihat script.js) -- server ini TIDAK lagi
  * menyimpan data pengguna, password, atau sesi apa pun.
@@ -23,6 +23,7 @@ const STATIC = {
   "/index.html": ["index.html", "text/html; charset=utf-8"],
   "/pelanggan.js": ["pelanggan.js", "text/javascript; charset=utf-8"],
   "/menu-utama.js": ["menu-utama.js", "text/javascript; charset=utf-8"],
+  "/pengaturan.js": ["pengaturan.js", "text/javascript; charset=utf-8"],
   "/laporan.js": ["laporan.js", "text/javascript; charset=utf-8"],
   "/riwayat.js": ["riwayat.js", "text/javascript; charset=utf-8"],
   "/style.css": ["style.css", "text/css; charset=utf-8"],

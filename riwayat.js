@@ -1,13 +1,14 @@
 /* ============================================================
    riwayat.js — Modul RIWAYAT PEMBELIAN (admin)
-   Butuh pelanggan.js (data, $, rupiah, fmtDate, esc, todayWIB, addDays,
+   Butuh pelanggan.js dan pengaturan.js (data, $, rupiah, fmtDate, esc, todayWIB, addDays,
    csvCell, toast, loadCustomers, detail).
    ============================================================ */
 /* ================= RIWAYAT PEMBELIAN (admin) =================
    Daftar semua transaksi dari semua pelanggan. Dihitung di browser dari
    "data" yang sudah dimuat loadCustomers(), jadi tidak ada query baru dan
    otomatis ikut real-time (loadCustomers() memanggil renderRiwayat()). */
-const RI_PAGE_SIZE=20;
+// Jumlah baris per halaman diatur di menu Pengaturan (getSetting di pengaturan.js).
+const riPageSize=()=>(typeof getSetting==="function"&&Number(getSetting("riPageSize")))||20;
 let riPage=1;
 
 function riRange(){
@@ -54,9 +55,9 @@ function renderRiwayat(){
   $("riTotal").textContent=rupiah(total);
   $("riAvg").textContent=rupiah(arr.length?Math.round(total/arr.length):0);
 
-  const pages=Math.max(1,Math.ceil(arr.length/RI_PAGE_SIZE));
+  const pages=Math.max(1,Math.ceil(arr.length/riPageSize()));
   riPage=Math.min(Math.max(1,riPage),pages);
-  const start=(riPage-1)*RI_PAGE_SIZE, shown=arr.slice(start,start+RI_PAGE_SIZE);
+  const size=riPageSize(), start=(riPage-1)*size, shown=arr.slice(start,start+size);
   const filtering=$("riSearch").value||$("riProduct").value||$("riPeriod").value!=="all";
 
   $("riBody").innerHTML=shown.length?shown.map(t=>`<tr>

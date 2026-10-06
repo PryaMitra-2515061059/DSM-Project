@@ -1,6 +1,6 @@
 /* ============================================================
    laporan.js — Modul LAPORAN (admin)
-   Butuh pelanggan.js (data, $, rupiah, fmtDate, esc, todayWIB, addDays,
+   Butuh pelanggan.js dan pengaturan.js (data, $, rupiah, fmtDate, esc, todayWIB, addDays,
    daysBetween, addMonths, csvCell, toast).
    ============================================================ */
 /* ================= LAPORAN (admin) =================
@@ -99,7 +99,9 @@ function renderTrend(r){
   }).join("");
 }
 
-const LAP_DETAIL_LIMIT=100;
+// Batas baris rincian & nama usaha diatur di menu Pengaturan (pengaturan.js).
+const lapDetailLimit=()=>(typeof getSetting==="function"&&Number(getSetting("lapDetailLimit")))||100;
+const namaUsaha=()=>(typeof getSetting==="function"&&getSetting("namaUsaha"))||"Kopi Batin";
 function renderLaporan(){
   const r=aggregateReport();
   $("lapPeriodLabel").textContent="Periode: "+periodLabel(r.range);
@@ -121,12 +123,13 @@ function renderLaporan(){
     ?r.topCustomers.map(c=>barRow(c.name,c.visits+" transaksi",c.spend,maxCustomerSpend,rupiah(c.spend))).join("")
     :'<div class="empty">Belum ada pembelian pada periode ini.</div>';
 
-  const shown=r.allTrx.slice(0,LAP_DETAIL_LIMIT);
+  const limit=lapDetailLimit();
+  const shown=r.allTrx.slice(0,limit);
   $("lapTrxBody").innerHTML=shown.length
     ?shown.map(t=>`<tr><td>${fmtDate(t.date)}</td><td class="name">${esc(t.customerName)}</td><td>${esc(t.product)}</td><td>${Number(t.qty)} item</td><td class="money">${rupiah(t.amount)}</td></tr>`).join("")
     :'<tr><td colspan="5"><div class="empty">Tidak ada transaksi pada periode ini.</div></td></tr>';
-  $("lapDetailNote").textContent=r.allTrx.length>LAP_DETAIL_LIMIT
-    ?"Menampilkan "+LAP_DETAIL_LIMIT+" terbaru dari "+r.allTrx.length+" (semua ikut di CSV)"
+  $("lapDetailNote").textContent=r.allTrx.length>limit
+    ?"Menampilkan "+limit+" terbaru dari "+r.allTrx.length+" (semua ikut di CSV)"
     :(r.allTrx.length?r.allTrx.length+" transaksi":"");
 }
 
@@ -142,7 +145,7 @@ function onLaporanPeriodChange(){
 function exportLaporanCSV(){
   const r=aggregateReport();
   const rows=[
-    ["Laporan Kopi Batin"],
+    ["Laporan "+namaUsaha()],
     ["Periode",periodLabel(r.range)],
     [],
     ["Ringkasan"],
