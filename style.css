@@ -141,3 +141,37 @@ table{width:100%;border-collapse:collapse}th{font-size:10px;text-transform:upper
 .pager .btn:disabled{opacity:.45;cursor:default}
 .icon-btn:focus-visible,.pager .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 @media print{#viewRiwayat .toolbar,#viewRiwayat .pager{display:none !important}}
+
+/* ===== Halaman Depan (landing + menu) ===== */
+.landing{min-height:100vh;background:var(--bg)}
+.landing-nav{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:#21150f;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.15)}
+.landing-brand{display:flex;align-items:center;gap:11px}.landing-brand b{font-size:17px}
+.landing-login{background:#f2e7dc;border-color:#f2e7dc;color:#3b2417;padding:10px 22px}
+.landing-login:hover{background:#fff}
+.landing-hero{text-align:center;color:#fff;padding:84px 24px 76px;background:linear-gradient(135deg,#21150f,#4b2e1f)}
+.landing-hero h1{margin:0;font-size:clamp(28px,5vw,44px);letter-spacing:-1px}
+.landing-hero p{max-width:520px;margin:14px auto 26px;color:#d8c9bd;font-size:14px;line-height:1.6}
+.landing-cta{background:transparent;color:#fff;border-color:rgba(255,255,255,.45);text-decoration:none;display:inline-block;padding:11px 22px}
+.landing-cta:hover{background:rgba(255,255,255,.1)}
+.landing-menu{max-width:1040px;margin:0 auto;padding:44px 24px 20px;scroll-margin-top:60px}
+.landing-menu h2{margin:0 0 18px;font-size:24px;letter-spacing:-.5px;text-align:center}
+.menu-tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:26px}
+.menu-tab{border:1px solid var(--line);background:#fff;color:#70798b;padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:700;font-size:12px}
+.menu-tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.menu-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.menu-ico{width:46px;height:46px;border-radius:12px;background:#f4eee9;display:grid;place-items:center;font-size:24px;margin-bottom:12px}
+.menu-card h3{margin:0;font-size:15px}
+.menu-card p{margin:6px 0 14px;color:var(--muted);font-size:12px;line-height:1.5;flex:1}
+.menu-price{font-weight:800;color:var(--primary);font-size:14px}
+.landing-foot{text-align:center;color:#9299a5;font-size:11px;padding:30px 20px 36px}
+.auth-card{position:relative}
+.auth-close{position:absolute;top:12px;right:14px;border:0;background:none;font-size:24px;line-height:1;color:#7b8390;cursor:pointer}
+.auth-close:hover{color:var(--text)}
+@media(max-width:600px){.landing-nav{padding:12px 16px}.landing-hero{padding:56px 20px 52px}}
+
+.landing-actions{display:flex;align-items:center;gap:10px}
+.landing-user{color:#d8c9bd;font-size:12px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landing-logout{background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
+.landing-logout:hover{background:rgba(255,255,255,.1)}
+@media(max-width:600px){.landing-user{display:none}}

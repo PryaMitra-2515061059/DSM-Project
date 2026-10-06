@@ -378,29 +378,26 @@ async function fetchMyProfile(userId){
   return data;
 }
 
+// applyView() & dashOpen ada di menu-utama.js (tampilan halaman utama vs dashboard).
 function applySession(user,profile){
   sessionUser={id:user.id,email:user.email,name:profile?.name||user.user_metadata?.full_name||user.email?.split("@")[0]||"Member"};
   sessionRole=profile?.role==="admin"?"admin":"pembeli";
   $("authScreen").classList.add("hidden");
   updateUserUI();
   if(sessionRole==="admin"){
-    $("adminApp").classList.remove("hidden");
-    $("buyerApp").classList.add("hidden");
     loadCustomers();
     startRealtimeOnce();
   }else{
-    $("adminApp").classList.add("hidden");
-    $("buyerApp").classList.remove("hidden");
     loadMyProfile();
     startBuyerRealtimeOnce();
   }
+  applyView();   // setelah login: kembali ke halaman utama, tombol jadi "Dashboard"
 }
 
 function clearSession(){
-  sessionUser=null; sessionRole=null;
-  $("adminApp").classList.add("hidden");
-  $("buyerApp").classList.add("hidden");
-  $("authScreen").classList.remove("hidden");
+  sessionUser=null; sessionRole=null; dashOpen=false;
+  $("authScreen").classList.add("hidden");
+  applyView();
   backToPortalPicker();
   try{supabaseClient.removeAllChannels()}catch{}
   realtimeStarted=false; buyerRealtimeStarted=false;

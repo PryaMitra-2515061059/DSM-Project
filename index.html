@@ -8,6 +8,28 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- ===== Halaman Depan (publik, sebelum login) ===== -->
+<div class="landing" id="landingPage">
+  <header class="landing-nav">
+    <div class="landing-brand"><div class="logo">KB</div><b>Kopi Batin</b></div>
+    <div class="landing-actions"><span class="landing-user hidden" id="landingUser"></span><button class="btn landing-logout hidden" id="landingLogout" onclick="logout()">Keluar</button><button class="btn primary landing-login" id="landingAuthBtn" onclick="landingAuthAction()">Login</button></div>
+  </header>
+
+  <section class="landing-hero">
+    <h1>Secangkir hangat, sepenuh hati.</h1>
+    <p>Selamat datang di Kopi Batin. Lihat menu kami, lalu login untuk melihat profil dan riwayat pembelian Anda.</p>
+    <a class="btn landing-cta" href="#menuSection">Lihat Menu ↓</a>
+  </section>
+
+  <section class="landing-menu" id="menuSection">
+    <h2>Menu Kopi Batin</h2>
+    <div class="menu-tabs" id="menuTabs"></div>
+    <div class="menu-grid" id="menuGrid"></div>
+  </section>
+
+  <footer class="landing-foot">© Kopi Batin · Sistem Informasi Pelanggan</footer>
+</div>
+
 <div class="app hidden" id="adminApp">
 <aside class="sidebar">
   <div class="brand"><div class="logo">KB</div><div><b>Kopi Batin</b><small>Customer Information</small></div></div>
@@ -23,7 +45,7 @@
 </aside>
 
 <main class="main">
-  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong id="crumbLabel">Data Pelanggan</strong></div><div class="top-actions"><span id="pelangganTopActions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button></span><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small id="userRoleLabel">Admin</small></div></div><button class="btn" onclick="logout()">Keluar</button></div></div></div>
+  <div class="topbar"><div class="crumb">Kopi Batin &nbsp;/&nbsp; <strong id="crumbLabel">Data Pelanggan</strong></div><div class="top-actions"><span id="pelangganTopActions"><button class="btn" onclick="exportCSV()">↓ Export CSV</button><button class="btn primary" onclick="openCustomer()">+ Tambah Pelanggan</button></span><div class="user-menu"><div class="user-chip"><div class="user-avatar" id="userAvatar">MB</div><div class="user-info"><b id="userName">Member</b><small id="userRoleLabel">Admin</small></div></div><button class="btn" onclick="showLanding()">← Menu Utama</button><button class="btn" onclick="logout()">Keluar</button></div></div></div>
   <div class="page-head"><div><h1 id="pageTitle">Data Pelanggan</h1><p id="pageDesc">Kelola data pelanggan, frekuensi kunjungan, dan riwayat pembelian Kopi Batin.</p></div>
     <div class="live-box" title="Data tersinkron otomatis antar tab/jendela"><span class="live-dot"></span><div><b>Live</b><small id="liveClock">--:--:--</small></div></div>
   </div>
@@ -157,6 +179,7 @@
       <div class="top-actions">
         <div class="user-menu">
           <div class="user-chip"><div class="user-avatar" id="buyerAvatar">MB</div><div class="user-info"><b id="buyerName">Member</b><small>Pembeli</small></div></div>
+          <button class="btn" onclick="showLanding()">← Menu Utama</button>
           <button class="btn" onclick="logout()">Keluar</button>
         </div>
       </div>
@@ -225,8 +248,9 @@
   </div>
 </div>
 
-<div class="auth-back" id="authScreen">
+<div class="auth-back hidden" id="authScreen">
   <div class="auth-card">
+    <button type="button" class="auth-close" onclick="closeAuth()" aria-label="Tutup">×</button>
     <div class="auth-brand"><div class="auth-logo">KB</div><h2>Kopi Batin</h2><p id="portalBadge">Pilih jenis akun untuk masuk</p></div>
 
     <!-- Langkah 1: pengguna memilih mau masuk sebagai Pembeli (profil &
@@ -296,6 +320,7 @@
 <div class="toast" id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="pelanggan.js"></script>
+  <script src="menu-utama.js"></script>
   <script src="laporan.js"></script>
   <script src="riwayat.js"></script>
 </body>
